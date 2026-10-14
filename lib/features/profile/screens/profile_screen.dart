@@ -1,0 +1,928 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/destination_repository.dart';
+import '../../../data/repositories/itinerary_repository.dart';
+import '../../../data/repositories/theme_repository.dart';
+import '../../auth/screens/login_screen.dart';
+import '../../auth/screens/pin_lock_screen.dart';
+import '../../auth/screens/register_screen.dart';
+import '../../academic/screens/course_feedback_screen.dart';
+import '../../offline/screens/offline_sync_screen.dart';
+import '../../../shared/widgets/google_logo_icon.dart';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _authRepo = AuthRepository();
+  final _itineraryRepo = ItineraryRepository();
+  final _destinationRepo = DestinationRepository();
+  final _themeRepo = ThemeRepository();
+
+  void _openEditNameDialog() {
+    final controller = TextEditingController(text: _authRepo.userName);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Ubah Nama Profil'),
+          content: TextField(
+            controller: controller,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: 'Nama Lengkap',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  _authRepo.updateProfile(name: controller.text.trim());
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nama profil berhasil diperbarui!'),
+                      backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openThemeSelectorDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final currentMode = _themeRepo.themeMode;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.palette_outlined, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Text('Pilih Tema Aplikasi'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.settings_brightness_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: const Text('Ikuti Sistem (Otomatis)'),
+                    subtitle: const Text(
+                      'Menyesuaikan tema terang / gelap HP',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: currentMode == ThemeMode.system
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.primary,
+                          )
+                        : const Icon(
+                            Icons.radio_button_unchecked_rounded,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onTap: () {
+                      _themeRepo.setThemeMode(ThemeMode.system);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.light_mode_rounded,
+                      color: AppColors.secondaryLight,
+                    ),
+                    title: const Text('Mode Terang (Light)'),
+                    subtitle: const Text(
+                      'Nuansa hijau Parahyangan segar & cerah',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: currentMode == ThemeMode.light
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.primary,
+                          )
+                        : const Icon(
+                            Icons.radio_button_unchecked_rounded,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onTap: () {
+                      _themeRepo.setThemeMode(ThemeMode.light);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.dark_mode_rounded,
+                      color: AppColors.primaryLight,
+                    ),
+                    title: const Text('Mode Gelap (Dark)'),
+                    subtitle: const Text(
+                      'Nuansa malam Bandung elegan & hemat baterai',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: currentMode == ThemeMode.dark
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.primary,
+                          )
+                        : const Icon(
+                            Icons.radio_button_unchecked_rounded,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onTap: () {
+                      _themeRepo.setThemeMode(ThemeMode.dark);
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Tutup'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmLogout() {
+    final messenger = ScaffoldMessenger.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Konfirmasi Keluar'),
+          content: const Text(
+            'Apakah Anda yakin ingin keluar dari akun ini? Sesi Anda akan beralih ke mode Tamu.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _authRepo.logout();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Anda telah keluar dari akun.'),
+                      backgroundColor: AppColors.secondary,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Keluar Akun',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([_authRepo, _themeRepo]),
+      builder: (context, _) {
+        final isGuest = _authRepo.isGuest;
+        final hasPin = _authRepo.hasPin;
+        final isBiometric = _authRepo.isBiometricEnabled;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profil & Keamanan Akun'),
+            actions: [
+              if (!isGuest)
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                  ),
+                  tooltip: 'Ubah Nama Profil',
+                  onPressed: _openEditNameDialog,
+                ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+
+                // User Avatar & Badge
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 46,
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.12,
+                        ),
+                        child: Icon(
+                          isGuest
+                              ? Icons.person_outline_rounded
+                              : Icons.person_rounded,
+                          size: 50,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: isGuest
+                                ? AppColors.secondary
+                                : AppColors.success,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: Icon(
+                            isGuest
+                                ? Icons.hiking_rounded
+                                : Icons.verified_user_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Name & Email
+                Text(
+                  _authRepo.userName,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _authRepo.userEmail,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.getTextSecondary(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Status chip
+                Builder(
+                  builder: (context) {
+                    final provider = _authRepo.currentUser?.authProvider ?? 'email';
+                    final isGoogle = provider == 'google';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (isGuest
+                                ? AppColors.warning
+                                : (isGoogle ? Colors.blue : AppColors.success))
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isGoogle) ...[
+                            const GoogleLogoIcon(size: 14),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(
+                            isGuest
+                                ? 'Mode Tamu (Guest Traveler)'
+                                : (isGoogle
+                                    ? 'Terverifikasi Akun Google'
+                                    : 'Akun Resmi Terverifikasi'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isGuest
+                                  ? AppColors.warning
+                                  : (isGoogle ? Colors.blue.shade800 : AppColors.success),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Guest Login CTA Card (if guest)
+                if (isGuest) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.08),
+                          AppColors.secondary.withValues(alpha: 0.08),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.stars_rounded, color: AppColors.primary),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Dapatkan Akses Penuh BandungHub',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Simpan itinerary liburan, aktifkan login biometrik cepat, dan simpan destinasi favorit Anda.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginScreen(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Masuk Akun',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const RegisterScreen(),
+                                    ),
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Daftar Baru',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Statistics Card
+                ListenableBuilder(
+                  listenable: _itineraryRepo,
+                  builder: (context, _) {
+                    return ListenableBuilder(
+                      listenable: _destinationRepo,
+                      builder: (context, _) {
+                        final itineraryCount =
+                            _itineraryRepo.itineraries.length;
+                        final favoriteCount =
+                            _destinationRepo.favoriteIds.length;
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 20,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.getCardColor(context),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.getBorderColor(context),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    '$itineraryCount',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Rencana Liburan',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                width: 1,
+                                height: 32,
+                                color: AppColors.getBorderColor(context),
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    '$favoriteCount',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.redAccent,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Destinasi Favorit',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                width: 1,
+                                height: 32,
+                                color: AppColors.getBorderColor(context),
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    hasPin ? 'Aktif' : 'Nonaktif',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: hasPin
+                                          ? AppColors.success
+                                          : AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Status PIN',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Security & Settings Section
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      // Section Header
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.security_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Keamanan & Privasi (Phase 2)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+
+                      // Biometric Auth Switch
+                      SwitchListTile(
+                        secondary: const Icon(
+                          Icons.fingerprint_rounded,
+                          color: AppColors.primary,
+                        ),
+                        title: const Text('Autentikasi Biometrik'),
+                        subtitle: Text(
+                          isBiometric
+                              ? 'Aktif (Sidik Jari / Face Unlock diizinkan)'
+                              : 'Nonaktifkan sensor biometrik untuk masuk',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        value: isBiometric,
+                        onChanged: (val) async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final success = await _authRepo.toggleBiometric(val);
+                          if (!success && mounted) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Sensor biometrik tidak tersedia atau dibatalkan.',
+                                ),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const Divider(height: 1),
+
+                      // Setup or Change PIN
+                      ListTile(
+                        leading: const Icon(
+                          Icons.pin_rounded,
+                          color: AppColors.secondary,
+                        ),
+                        title: Text(
+                          hasPin
+                              ? 'Ubah PIN Keamanan'
+                              : 'Atur PIN Keamanan (6 Digit)',
+                        ),
+                        subtitle: Text(
+                          hasPin
+                              ? 'PIN 6-digit tersimpan aman'
+                              : 'PIN belum diatur',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PinLockScreen(
+                                mode: PinScreenMode.create,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Remove PIN if exists
+                      if (hasPin) ...[
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.lock_open_rounded,
+                            color: AppColors.warning,
+                          ),
+                          title: const Text('Hapus PIN Keamanan'),
+                          subtitle: const Text(
+                            'Nonaktifkan verifikasi PIN saat login',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          trailing: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppColors.warning,
+                          ),
+                          onTap: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            await _authRepo.removePin();
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('PIN keamanan telah dihapus.'),
+                                  backgroundColor: AppColors.secondary,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Theme & Appearance Section (Phase 9)
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.palette_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Tampilan & Aksesibilitas (Phase 9)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? AppColors.primaryLight
+                                    : AppColors.primaryDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(
+                          _themeRepo.themeMode == ThemeMode.dark
+                              ? Icons.dark_mode_rounded
+                              : (_themeRepo.themeMode == ThemeMode.light
+                                  ? Icons.light_mode_rounded
+                                  : Icons.settings_brightness_rounded),
+                          color: AppColors.primary,
+                        ),
+                        title: const Text('Mode Tampilan (Tema)'),
+                        subtitle: Text(
+                          _themeRepo.themeModeLabel,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Ubah',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                        onTap: _openThemeSelectorDialog,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // General App Settings & Feedback Card
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.cloud_sync_rounded,
+                          color: AppColors.primary,
+                        ),
+                        title: const Text('Sinkronisasi & Cache Offline'),
+                        subtitle: const Text(
+                          'Kelola mode offline, antrean sinkronisasi, & penyimpanan lokal',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OfflineSyncScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.school_rounded,
+                          color: AppColors.secondary,
+                        ),
+                        title: const Text('Kesan & Pesan Kuliah'),
+                        subtitle: const Text(
+                          'Evaluasi & refleksi akademik untuk dosen pengampu',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CourseFeedbackScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.info_outline_rounded,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                        title: const Text('Versi Aplikasi'),
+                        trailing: Text(
+                          'v${AppConstants.appVersion}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Logout or Switch Account Button
+                if (!isGuest)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _confirmLogout,
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: AppColors.error,
+                      ),
+                      label: const Text(
+                        'Keluar dari Akun',
+                        style: TextStyle(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.error),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text(
+                        'Masuk / Daftar Akun',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+import 'app.dart';
+import 'data/repositories/auth_repository.dart';
+import 'data/repositories/itinerary_repository.dart';
+import 'data/repositories/notification_repository.dart';
+import 'data/repositories/offline_sync_repository.dart';
+import 'data/repositories/review_repository.dart';
+import 'data/repositories/theme_repository.dart';
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
-    );
-  }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ThemeRepository().init();
+  await AuthRepository().init();
+  await ItineraryRepository().init();
+  await NotificationRepository().init();
+  await ReviewRepository().init();
+  await OfflineSyncRepository().init();
+  runApp(const BandungHubApp());
 }
