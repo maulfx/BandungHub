@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../dummy/dummy_destinations.dart';
 import '../../models/destination.dart';
+import '../../services/supabase_service.dart';
 
 enum DestinationSortBy {
   popular, // Rating highest
@@ -22,6 +23,24 @@ class DestinationRepository extends ChangeNotifier {
 
   List<Destination> get allDestinations => List.unmodifiable(_allDestinations);
   Set<String> get favoriteIds => Set.unmodifiable(_favoriteIds);
+
+  Future<void> init() async {
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      try {
+        final cloud = await sb.fetchDestinations();
+        if (cloud.isNotEmpty) {
+          _allDestinations.clear();
+          _allDestinations.addAll(cloud);
+          notifyListeners();
+        } else {
+          await sb.seedDestinationsIfEmpty(DummyDestinations.list);
+        }
+      } catch (e) {
+        debugPrint('Fetch cloud destinations error: $e');
+      }
+    }
+  }
 
   bool isFavorite(String id) => _favoriteIds.contains(id);
 

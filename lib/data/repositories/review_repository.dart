@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/destination_review.dart';
+import '../../services/supabase_service.dart';
 
 class ReviewRepository extends ChangeNotifier {
   static final ReviewRepository _instance = ReviewRepository._internal();
@@ -79,6 +81,13 @@ class ReviewRepository extends ChangeNotifier {
     _reviews.insert(0, newReview);
     notifyListeners();
     await _saveToStorage();
+
+    // Kirim juga ke Supabase jika sedang terhubung
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      unawaited(sb.submitReview(newReview));
+    }
+
     return newReview;
   }
 

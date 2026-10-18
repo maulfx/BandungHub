@@ -21,4 +21,22 @@ class EnvConfig {
 
   static const Duration requestTimeout = Duration(seconds: 15);
   static const bool useLocalMockFallback = true;
+
+  // Supabase Configuration
+  // Masukkan Project URL dan Anon Key dari dashboard Supabase: Settings -> API
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://ztudzzgehrbiwbprdajk.supabase.co',
+  );
+
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'sb_publishable_4RNxNlVS96njxXYy6IXi-w_Pg-td0fO',
+  );
+
+  static bool get isSupabaseConfigured =>
+      supabaseUrl.isNotEmpty &&
+      !supabaseUrl.contains('YOUR_PROJECT_ID') &&
+      supabaseAnonKey.isNotEmpty &&
+      !supabaseAnonKey.contains('YOUR_SUPABASE_ANON_KEY');
 }
