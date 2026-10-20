@@ -52,6 +52,35 @@ void main() {
       expect(await aiService.hasApiKey(), isFalse);
     });
 
+    test('Chat history persistence saves, loads, and clears messages', () async {
+      await aiService.clearChatHistory();
+      expect(await aiService.loadChatHistory(), isEmpty);
+
+      final testMessages = [
+        ChatMessage(
+          id: 'test_msg_1',
+          text: 'Halo Kang Bandung',
+          isUser: true,
+          timestamp: DateTime.now(),
+        ),
+        ChatMessage(
+          id: 'test_msg_2',
+          text: 'Sampurasun! Ada yang bisa dibantu?',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      ];
+
+      await aiService.saveChatHistory(testMessages);
+      final loaded = await aiService.loadChatHistory();
+      expect(loaded.length, 2);
+      expect(loaded.first.text, 'Halo Kang Bandung');
+      expect(loaded.last.text, 'Sampurasun! Ada yang bisa dibantu?');
+
+      await aiService.clearChatHistory();
+      expect(await aiService.loadChatHistory(), isEmpty);
+    });
+
     test(
       'Local heuristic responds with nature destinations for alam query',
       () async {

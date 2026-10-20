@@ -40,7 +40,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _checkApiKeyStatus();
-    _addInitialGreeting();
+    _initChatHistory();
+  }
+
+  Future<void> _initChatHistory() async {
+    final history = await _aiService.loadChatHistory();
+    if (mounted) {
+      setState(() {
+        if (history.isNotEmpty) {
+          _messages.clear();
+          _messages.addAll(history);
+        } else {
+          _messages.clear();
+          _addInitialGreeting();
+        }
+      });
+      _scrollToBottom();
+    }
 
     if (widget.initialPrompt != null && widget.initialPrompt!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,6 +120,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _isTyping = true;
     });
     _scrollToBottom();
+    await _aiService.saveChatHistory(_messages);
 
     final response = await _aiService.processMessage(query);
 
@@ -113,6 +130,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         _isTyping = false;
       });
       _scrollToBottom();
+      await _aiService.saveChatHistory(_messages);
     }
   }
 
@@ -231,12 +249,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(dialogContext);
-                setState(() {
-                  _messages.clear();
-                  _addInitialGreeting();
-                });
+                await _aiService.clearChatHistory();
+                if (mounted) {
+                  setState(() {
+                    _messages.clear();
+                    _addInitialGreeting();
+                  });
+                }
               },
               child: const Text(
                 'Bersihkan',
