@@ -156,5 +156,26 @@ void main() {
       expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
       expect(find.byIcon(Icons.arrow_forward_ios_rounded), findsOneWidget);
     });
+
+    testWidgets('Tapping help icon button opens how-to-play guide dialog',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: GameScreen()));
+      await tester.pumpAndSettle();
+
+      final helpBtn = find.byKey(const Key('btn_game_how_to_play'));
+      expect(helpBtn, findsOneWidget);
+
+      await tester.tap(helpBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Panduan Lompat Pixel'), findsOneWidget);
+      expect(find.text('Platform Kayu (Normal)'), findsOneWidget);
+      expect(find.text('Mengerti!'), findsOneWidget);
+
+      await tester.tap(find.text('Mengerti!'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Platform Kayu (Normal)'), findsNothing);
+    });
   });
 }

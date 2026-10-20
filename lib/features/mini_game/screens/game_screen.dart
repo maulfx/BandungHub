@@ -22,6 +22,7 @@ class _GameScreenState extends State<GameScreen>
   final _sensorService = SensorService();
   StreamSubscription<double>? _tiltSub;
   bool _isGyroEnabled = true;
+  double _liveTilt = 0.0;
 
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
@@ -44,6 +45,9 @@ class _GameScreenState extends State<GameScreen>
     // Listen to device motion/gyroscope for tilt-based steering
     _sensorService.startListening();
     _tiltSub = _sensorService.gameTiltStream.listen((tilt) {
+      if (mounted) {
+        setState(() => _liveTilt = tilt);
+      }
       if (_isGyroEnabled &&
           _controller.isPlaying &&
           !_controller.isPaused &&
@@ -117,30 +121,50 @@ class _GameScreenState extends State<GameScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
+        final isPlaying = _controller.isPlaying;
         return Scaffold(
-          backgroundColor: const Color(0xFF16152B), // Retro Anime Night Slate
+          backgroundColor: isPlaying
+              ? const Color(0xFF16152B) // Retro Anime Night Slate during play
+              : AppColors.getBackgroundColor(context), // App theme during Lobby
           appBar: AppBar(
-            backgroundColor: const Color(0xFF201E3D),
             elevation: 0,
-            title: const Row(
+            title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('🎸', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  'BOCCHI JUMPY 🎸',
+                  'Bocchi Jumpy Game',
                   style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.bold,
                     fontSize: 18,
-                    color: Color(0xFFFF7EB3), // Bocchi Pink
+                    color: isPlaying
+                        ? Colors.white
+                        : AppColors.getTextPrimary(context),
                   ),
                 ),
               ],
             ),
             actions: [
+              // Logo Tanda Tanya (Panduan Lompat Pixel)
+              IconButton(
+                key: const Key('btn_game_how_to_play'),
+                icon: const Icon(Icons.help_outline_rounded),
+                tooltip: 'Panduan Lompat Pixel',
+                onPressed: () => _showHowToPlayDialog(context),
+              ),
               // Gyro Tilt Toggle Button
               IconButton(
                 icon: Icon(
@@ -148,24 +172,24 @@ class _GameScreenState extends State<GameScreen>
                       ? Icons.screen_rotation_rounded
                       : Icons.screen_lock_rotation_rounded,
                   color: _isGyroEnabled
-                      ? const Color(0xFFFF7EB3)
-                      : Colors.white54,
+                      ? AppColors.primary
+                      : AppColors.textSecondaryLight,
                 ),
                 tooltip: _isGyroEnabled
-                    ? 'Gyro Aktif (Miringkan HP)'
-                    : 'Gyro Nonaktif (Gunakan Tombol)',
+                    ? 'Sensor Gyro Aktif (Miringkan HP)'
+                    : 'Sensor Gyro Nonaktif',
                 onPressed: () {
                   setState(() => _isGyroEnabled = !_isGyroEnabled);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
                         _isGyroEnabled
-                            ? 'Gyroscope Aktif: Miringkan HP ke kiri/kanan untuk bergerak!'
-                            : 'Gyroscope Nonaktif: Gunakan tombol panah di layar.',
+                            ? 'Sensor Gyroscope Aktif: Miringkan HP ke kiri/kanan untuk mengarahkan Bocchi!'
+                            : 'Sensor Gyroscope Nonaktif: Gunakan tombol panah di layar.',
                       ),
-                      duration: const Duration(seconds: 1),
+                      duration: const Duration(seconds: 2),
                       backgroundColor: _isGyroEnabled
-                          ? const Color(0xFF2D225A)
+                          ? AppColors.primary
                           : Colors.grey.shade800,
                     ),
                   );
@@ -177,7 +201,7 @@ class _GameScreenState extends State<GameScreen>
                     _controller.isPaused
                         ? Icons.play_arrow_rounded
                         : Icons.pause_rounded,
-                    color: const Color(0xFFFFD54F),
+                    color: AppColors.secondary,
                   ),
                   tooltip: _controller.isPaused ? 'Lanjutkan' : 'Jeda',
                   onPressed: _controller.togglePause,
@@ -185,7 +209,7 @@ class _GameScreenState extends State<GameScreen>
               if (_controller.isPlaying)
                 IconButton(
                   icon: const Icon(Icons.close_rounded,
-                      color: Color(0xFFFF5252)),
+                      color: AppColors.error),
                   tooltip: 'Keluar',
                   onPressed: () {
                     _controller.resetToLobby();
@@ -212,7 +236,7 @@ class _GameScreenState extends State<GameScreen>
   }
 
   // ===========================================================================
-  // 1. LOBBY VIEW (Anime Pixel Theme)
+  // 1. LOBBY VIEW (BandungHub Theme & Anime Elements)
   // ===========================================================================
   Widget _buildLobbyView(Size size) {
     return SingleChildScrollView(
@@ -220,25 +244,28 @@ class _GameScreenState extends State<GameScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Anime Banner Card with Pixel Aesthetic
+          // Banner Card matching App Theme (Teal & Amber Parahyangan)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2D225A), Color(0xFF181534)],
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.14),
+                  AppColors.secondary.withValues(alpha: 0.08),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFFFF7EB3).withValues(alpha: 0.6),
-                width: 2.5,
+                color: AppColors.primary.withValues(alpha: 0.3),
+                width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFF7EB3).withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -246,18 +273,18 @@ class _GameScreenState extends State<GameScreen>
               children: [
                 // Anime Character Avatar (Bocchi)
                 Container(
-                  width: 100,
-                  height: 100,
+                  width: 90,
+                  height: 90,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFE0EB),
+                    color: AppColors.getCardColor(context),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: const Color(0xFFFF7EB3),
-                      width: 3,
+                      color: AppColors.primary,
+                      width: 2.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -269,7 +296,7 @@ class _GameScreenState extends State<GameScreen>
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.none,
                     errorBuilder: (context, error, stackTrace) => const Center(
-                      child: Text('🎸', style: TextStyle(fontSize: 48)),
+                      child: Text('🎸', style: TextStyle(fontSize: 44)),
                     ),
                   ),
                 ),
@@ -280,41 +307,41 @@ class _GameScreenState extends State<GameScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                    color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xFF00E5FF),
-                      width: 1.5,
+                      color: AppColors.primary.withValues(alpha: 0.5),
+                      width: 1.2,
                     ),
                   ),
                   child: const Text(
-                    '★ BOCCHI THE ROCK! PIXEL GAME ★',
+                    '★ BOCCHI THE ROCK! MINI-GAME ★',
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF00E5FF),
-                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                      letterSpacing: 1.1,
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                const Text(
+                Text(
                   'Bocchi Jumpy!',
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 1,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getTextPrimary(context),
+                    letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Mainkan karakter Bocchi (Hitori Gotoh)! Lompat di atas platform kayu, hindari rintangan burung & hantu kecemasan, dan raih skor tertinggi!',
+                Text(
+                  'Bantu Bocchi (Hitori Gotoh) melompat setinggi mungkin! Miringkan HP Anda untuk mengarahkan lompatan atau gunakan tombol sentuh.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFFB0B3C7),
+                    color: AppColors.getTextSecondary(context),
                     height: 1.45,
                   ),
                 ),
@@ -323,183 +350,228 @@ class _GameScreenState extends State<GameScreen>
           ),
           const SizedBox(height: 16),
 
-          // High Score & Stats
+          // High Score & Stats matching App Theme
           Row(
             children: [
               Expanded(
                 child: _buildPixelStatCard(
                   icon: Icons.emoji_events_rounded,
-                  iconColor: const Color(0xFFFFD54F),
+                  iconColor: AppColors.secondary,
                   title: 'Skor Tertinggi',
                   value: '${_controller.highScore} pts',
-                  borderColor: const Color(0xFFFFD54F),
+                  borderColor: AppColors.secondary.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildPixelStatCard(
                   icon: Icons.sports_esports_rounded,
-                  iconColor: const Color(0xFFFF7EB3),
+                  iconColor: AppColors.primary,
                   title: 'Total Main',
                   value: '${_controller.gamesPlayed} Kali',
-                  borderColor: const Color(0xFFFF7EB3),
+                  borderColor: AppColors.primary.withValues(alpha: 0.4),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // How to Play & Items Guide (Anime Pixel Theme)
+          // Gyroscope / Tilt Mode Switch Card with Live Sensor Tester
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFF201E3D),
+              color: AppColors.getCardColor(context),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: _isGyroEnabled
+                    ? AppColors.primary.withValues(alpha: 0.5)
+                    : AppColors.getBorderColor(context),
                 width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Text('🎮', style: TextStyle(fontSize: 18)),
-                    SizedBox(width: 8),
-                    Text(
-                      'PANDUAN LOMPAT PIXEL',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFFFD54F),
-                        letterSpacing: 1,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (_isGyroEnabled
+                                ? AppColors.primary
+                                : Colors.grey)
+                            .withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        Icons.screen_rotation_rounded,
+                        color: _isGyroEnabled
+                            ? AppColors.primary
+                            : AppColors.textSecondaryLight,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Sensor Gyroscope & Kemiringan HP',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            _isGyroEnabled
+                                ? 'Aktif: Goyang / miringkan HP ke kiri & kanan'
+                                : 'Nonaktif: Menggunakan tombol panah layar',
+                            style: const TextStyle(
+                              color: AppColors.textSecondaryLight,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isGyroEnabled,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) {
+                        setState(() => _isGyroEnabled = val);
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildGuideItem(
-                  '🪵',
-                  'Platform Kayu',
-                  'Lompat ke kayu untuk memantul ke atas.',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideItem(
-                  '⚡',
-                  'Amplifier Spring',
-                  'Pantulan super tinggi melesat ke langit!',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideItem(
-                  '🕊️',
-                  'Burung & Ghost',
-                  'Musuh terbang anime, hindari agar tidak Game Over!',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideItem(
-                  '🎸',
-                  'Pick Gitar & Nada 🎵',
-                  'Koleksi item musik Bocchi untuk bonus skor ekstra!',
-                ),
-                const SizedBox(height: 8),
-                _buildGuideItem(
-                  '🔄',
-                  'Screen Wrap',
-                  'Keluar lewat sisi kiri akan muncul di sisi kanan!',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // Gyroscope / Tilt Mode Switch Card
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF201E3D),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _isGyroEnabled
-                    ? const Color(0xFFFF7EB3)
-                    : Colors.white24,
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.screen_rotation_rounded,
-                  color: _isGyroEnabled
-                      ? const Color(0xFFFF7EB3)
-                      : Colors.grey,
-                  size: 26,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (_isGyroEnabled) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  // Live Gyroscope Tester Bar
+                  Row(
                     children: [
-                      const Text(
-                        'Sensor Gyroscope (Tilt HP)',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                      const Expanded(
+                        child: Text(
+                          'Uji Sensor Gyro (Live):',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondaryLight,
+                          ),
                         ),
                       ),
                       Text(
-                        _isGyroEnabled
-                            ? 'Miringkan HP ke kiri/kanan untuk mengarahkan Bocchi'
-                            : 'Sensor dinonaktifkan (Gunakan tombol sentuh panah)',
-                        style: const TextStyle(
-                          color: Color(0xFFB0B3C7),
+                        _liveTilt > 0.12
+                            ? 'Miring Kanan ➔'
+                            : (_liveTilt < -0.12
+                                ? '⬅ Miring Kiri'
+                                : 'Posisi Netral'),
+                        style: TextStyle(
                           fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _liveTilt.abs() > 0.12
+                              ? AppColors.primary
+                              : AppColors.textSecondaryLight,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Switch(
-                  value: _isGyroEnabled,
-                  activeColor: const Color(0xFFFF7EB3),
-                  onChanged: (val) {
-                    setState(() => _isGyroEnabled = val);
-                  },
-                ),
+                  const SizedBox(height: 8),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final trackWidth = constraints.maxWidth;
+                      final bubbleX = (trackWidth / 2) +
+                          (_liveTilt.clamp(-1.0, 1.0) * (trackWidth / 2 - 16));
+                      return Stack(
+                        children: [
+                          Container(
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(
+                                color: AppColors.getBorderColor(context),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: trackWidth / 2 - 1,
+                            top: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 2,
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          Positioned(
+                            left: (bubbleX - 7).clamp(0.0, trackWidth - 14),
+                            top: 1.5,
+                            child: Container(
+                              width: 11,
+                              height: 11,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
-          // Big Start Button (Retro Arcade Style)
+          // Tombol Buka Panduan Lompat Pixel
+          OutlinedButton.icon(
+            key: const Key('btn_open_how_to_play'),
+            onPressed: () => _showHowToPlayDialog(context),
+            icon: const Icon(Icons.help_outline_rounded, size: 20),
+            label: const Text('Buka Panduan Lompat Pixel & Musuh (?)'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              side: BorderSide(color: AppColors.getBorderColor(context)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Start Game Button matching App Theme
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF7EB3),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(
-                  color: Colors.white,
-                  width: 2,
-                ),
+                borderRadius: BorderRadius.circular(14),
               ),
-              elevation: 8,
-              shadowColor: const Color(0xFFFF7EB3).withValues(alpha: 0.6),
+              elevation: 4,
             ),
             onPressed: () => _startGame(size),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.play_arrow_rounded, size: 28),
+                Icon(Icons.play_arrow_rounded, size: 26),
                 SizedBox(width: 8),
                 Text(
                   'Mulai Lompat!',
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],
@@ -508,6 +580,123 @@ class _GameScreenState extends State<GameScreen>
           const SizedBox(height: 20),
         ],
       ),
+    );
+  }
+
+  void _showHowToPlayDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text('🎮', style: TextStyle(fontSize: 20)),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Panduan Lompat Pixel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Kuasai cara bermain dan jenis rintangan untuk meraih rekor skor tertinggi bersama Bocchi!',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+              ),
+              const SizedBox(height: 16),
+              _buildGuideDialogItem(
+                '🪵',
+                'Platform Kayu (Normal)',
+                'Lompat ke atas kayu untuk memantul naik secara stabil.',
+              ),
+              const Divider(height: 16),
+              _buildGuideDialogItem(
+                '⚡',
+                'Amplifier Spring (Super)',
+                'Pegas amplifier musik melesatkan Bocchi tinggi ke langit!',
+              ),
+              const Divider(height: 16),
+              _buildGuideDialogItem(
+                '🕊️',
+                'Burung & Ghost (Musuh)',
+                'Hindari musuh terbang anime agar Bocchi tidak Game Over.',
+              ),
+              const Divider(height: 16),
+              _buildGuideDialogItem(
+                '🎸',
+                'Pick Gitar & Nada Musik',
+                'Koleksi item musik Bocchi the Rock untuk bonus skor ekstra!',
+              ),
+              const Divider(height: 16),
+              _buildGuideDialogItem(
+                '📱',
+                'Kontrol Gyroscope / Kemiringan HP',
+                'Goyang / miringkan HP ke kiri atau kanan. Tersedia juga tombol panah di layar.',
+              ),
+              const Divider(height: 16),
+              _buildGuideDialogItem(
+                '🔄',
+                'Screen Wrap (Tembus Layar)',
+                'Keluar melewati sisi kiri layar akan muncul otomatis di sisi kanan!',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Mengerti!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuideDialogItem(String icon, String title, String desc) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondaryLight),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -521,12 +710,19 @@ class _GameScreenState extends State<GameScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF201E3D),
+        color: AppColors.getCardColor(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: borderColor.withValues(alpha: 0.6),
-          width: 1.8,
+          color: borderColor,
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,10 +733,10 @@ class _GameScreenState extends State<GameScreen>
               const SizedBox(width: 6),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFB0B3C7),
+                  color: AppColors.getTextSecondary(context),
                 ),
               ),
             ],
@@ -550,44 +746,12 @@ class _GameScreenState extends State<GameScreen>
             value,
             style: TextStyle(
               fontSize: 17,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.bold,
               color: iconColor,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildGuideItem(String icon, String title, String desc) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 16)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                desc,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFFB0B3C7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

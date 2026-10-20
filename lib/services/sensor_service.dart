@@ -57,6 +57,7 @@ class SensorService {
   double _lastMagZ = 0;
   double _currentHeading = 0;
 
+  double _currentTilt = 0.0;
   bool _isListening = false;
   bool get isListening => _isListening;
 
@@ -66,10 +67,19 @@ class SensorService {
     _isListening = true;
 
     try {
-      // 1. Gyroscope for rapid game tilt dynamics
-      _gyroSub = gyroscopeEventStream().listen(
+      // 1. Gyroscope for rapid game tilt dynamics (shaking & twisting)
+      _gyroSub = gyroscopeEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
         (event) {
-          // Gyroscope angular velocity
+          // In portrait: event.z is rotation around phone screen, event.y is roll rate
+          // Tilting/shaking left gives angular velocity
+          final gyroRate = (-event.y * 0.5 - event.z * 0.35).clamp(-1.0, 1.0);
+          if (gyroRate.abs() > 0.05) {
+            _currentTilt =
+                (_currentTilt * 0.65 + gyroRate * 0.35).clamp(-1.0, 1.0);
+            _gameTiltController.add(_currentTilt);
+          }
         },
         onError: (e) {
           debugPrint('Gyroscope stream error: $e');
@@ -81,7 +91,9 @@ class SensorService {
 
     try {
       // 2. Accelerometer for tilt angles (pitch, roll) and gravity vector
-      _accelSub = accelerometerEventStream().listen(
+      _accelSub = accelerometerEventStream(
+        samplingPeriod: SensorInterval.gameInterval,
+      ).listen(
         (event) {
           _lastAccelX = event.x;
           _lastAccelY = event.y;
@@ -89,11 +101,12 @@ class SensorService {
 
           // Game steering calculation:
           // In portrait: tilting phone left makes event.x positive; right makes event.x negative
-          // Normalize to -1.0 .. +1.0 range with deadzone
-          final rawTilt = -event.x / 5.0; // 5 m/s^2 is ~30 degree tilt
-          final clampedTilt = rawTilt.clamp(-1.0, 1.0);
-          final filteredTilt = (clampedTilt.abs() < 0.05) ? 0.0 : clampedTilt;
-          _gameTiltController.add(filteredTilt);
+          // Scaling by 3.2 makes a natural 20-degree tilt comfortably steer the character
+          final rawTilt = (-event.x / 3.2).clamp(-1.0, 1.0);
+          final filteredTilt = (rawTilt.abs() < 0.03) ? 0.0 : rawTilt;
+          _currentTilt =
+              (_currentTilt * 0.4 + filteredTilt * 0.6).clamp(-1.0, 1.0);
+          _gameTiltController.add(_currentTilt);
 
           _computeOrientation();
         },
@@ -107,7 +120,9 @@ class SensorService {
 
     try {
       // 3. Magnetometer for true compass heading
-      _magSub = magnetometerEventStream().listen(
+      _magSub = magnetometerEventStream(
+        samplingPeriod: SensorInterval.uiInterval,
+      ).listen(
         (event) {
           _lastMagX = event.x;
           _lastMagY = event.y;
