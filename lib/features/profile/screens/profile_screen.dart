@@ -10,6 +10,7 @@ import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
 import '../../auth/screens/register_screen.dart';
 import '../../academic/screens/course_feedback_screen.dart';
+import '../../converter/screens/travel_converter_screen.dart';
 import '../../offline/screens/offline_sync_screen.dart';
 import '../../../shared/widgets/google_logo_icon.dart';
 
@@ -837,6 +838,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.currency_exchange_rounded,
+                          color: AppColors.primary,
+                        ),
+                        title: const Text('Konverter Mata Uang & Waktu'),
+                        subtitle: const Text(
+                          'Kalkulator kurs valas dan penyesuaian zona waktu wisatawan',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TravelConverterScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(
                           Icons.cloud_sync_rounded,

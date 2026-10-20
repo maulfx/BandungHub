@@ -9,6 +9,7 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../data/repositories/notification_repository.dart';
+import '../../converter/screens/travel_converter_screen.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
 import '../../notifications/screens/notification_center_screen.dart';
 import '../../offline/widgets/offline_banner_widget.dart';
@@ -192,6 +193,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       );
                                     },
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              // Travel Currency & Timezone Converter
+                              IconButton(
+                                tooltip: 'Konverter Kurs & Waktu Wisatawan',
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.getCardColor(context),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.getBorderColor(context),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.currency_exchange_rounded,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const TravelConverterScreen(),
+                                    ),
                                   );
                                 },
                               ),
@@ -537,6 +567,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor:
                                               Colors.amber.shade300,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                      ),
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const TravelConverterScreen(),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.currency_exchange_rounded,
+                                          size: 14,
+                                          color: AppColors.primary,
+                                        ),
+                                        label: const Text(
+                                          'Kurs & Waktu',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
                                             vertical: 8,
