@@ -5,7 +5,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../models/destination.dart';
-import '../../../services/google_places_service.dart';
 import '../../../shared/widgets/destination_card.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../map/screens/destination_map_screen.dart';
@@ -22,7 +21,6 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   final _repository = DestinationRepository();
-  final _placesService = GooglePlacesService();
   final _searchController = TextEditingController();
 
   late String _selectedCategory;
@@ -31,10 +29,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
   bool _onlyFavorites = false;
   bool _isGridView = false;
   DestinationSortBy _sortBy = DestinationSortBy.popular;
-
-  bool _useGooglePlaces = false;
-  bool _isSearchingGooglePlaces = false;
-  List<Destination> _googlePlacesResults = [];
 
   @override
   void initState() {
@@ -55,108 +49,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
       _searchController.clear();
       _maxBudget = null;
       _onlyFavorites = false;
-      _useGooglePlaces = false;
       _sortBy = DestinationSortBy.popular;
     });
-  }
-
-  Future<void> _searchGooglePlaces(String query) async {
-    setState(() => _isSearchingGooglePlaces = true);
-    final results = await _placesService.searchBandungDestinations(query);
-    if (mounted) {
-      setState(() {
-        _googlePlacesResults = results;
-        _isSearchingGooglePlaces = false;
-      });
-    }
-  }
-
-  void _openGoogleMapsApiKeyDialog() {
-    final keyController = TextEditingController();
-    _placesService.getApiKey().then((k) {
-      if (k != null) keyController.text = k;
-    });
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.map_rounded, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('Google Maps API Key', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Masukkan Google Maps / Places API Key untuk mengambil data destinasi & foto asli langsung dari Google Maps (dibatasi khusus area Bandung Raya).\n\nJika dikosongkan, sistem akan otomatis menggunakan database wisata terverifikasi BandungHub.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.4,
-                color: AppColors.textSecondaryLight,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: keyController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Google Places API Key',
-                hintText: 'AIzaSy...',
-                prefixIcon: const Icon(Icons.vpn_key_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogCtx);
-              await _placesService.clearApiKey();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Google Maps API Key dihapus. Menggunakan database lokal Bandung.',
-                    ),
-                    backgroundColor: AppColors.secondary,
-                  ),
-                );
-              }
-            },
-            child: const Text('Hapus Key', style: TextStyle(color: AppColors.error)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final k = keyController.text.trim();
-              Navigator.pop(dialogCtx);
-              if (k.isNotEmpty) {
-                await _placesService.saveApiKey(k);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Google Maps API Key berhasil disimpan!'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                  if (_useGooglePlaces) {
-                    _searchGooglePlaces(_searchQuery);
-                  }
-                }
-              }
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _openFilterBottomSheet() {
@@ -340,86 +234,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return ListenableBuilder(
       listenable: _repository,
       builder: (context, _) {
-        final List<Destination> destinations;
-        if (_useGooglePlaces) {
-          var list = _googlePlacesResults.where((item) {
-            if (_selectedCategory != 'Semua' &&
-                item.category.toLowerCase() !=
-                    _selectedCategory.toLowerCase()) {
-              return false;
-            }
-            if (_maxBudget != null && item.estimatedPrice > _maxBudget!) {
-              return false;
-            }
-            if (_onlyFavorites && !_repository.isFavorite(item.id)) {
-              return false;
-            }
-            return true;
-          }).toList();
-
-          switch (_sortBy) {
-            case DestinationSortBy.popular:
-              list.sort((a, b) => b.rating.compareTo(a.rating));
-              break;
-            case DestinationSortBy.priceLowest:
-              list.sort((a, b) => a.estimatedPrice.compareTo(b.estimatedPrice));
-              break;
-            case DestinationSortBy.priceHighest:
-              list.sort((a, b) => b.estimatedPrice.compareTo(a.estimatedPrice));
-              break;
-            case DestinationSortBy.nameAZ:
-              list.sort(
-                (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-              );
-              break;
-          }
-          destinations = list;
-        } else {
-          final localList = _repository.filterDestinations(
-            query: _searchQuery,
-            category: _selectedCategory,
-            maxBudget: _maxBudget,
-            onlyFavorites: _onlyFavorites,
-            sortBy: _sortBy,
-          );
-
-          if (_searchQuery.trim().length >= 3 &&
-              _googlePlacesResults.isNotEmpty) {
-            final Map<String, Destination> combined = {};
-            for (final d in localList) {
-              combined[d.name.toLowerCase().trim()] = d;
-            }
-            for (final g in _googlePlacesResults) {
-              final key = g.name.toLowerCase().trim();
-              if (!combined.containsKey(key)) {
-                if (_selectedCategory != 'Semua' &&
-                    g.category.toLowerCase() !=
-                        _selectedCategory.toLowerCase()) {
-                  continue;
-                }
-                combined[key] = g;
-              }
-            }
-            destinations = combined.values.toList();
-          } else {
-            destinations = localList;
-          }
-        }
+        final destinations = _repository.filterDestinations(
+          query: _searchQuery,
+          category: _selectedCategory,
+          maxBudget: _maxBudget,
+          onlyFavorites: _onlyFavorites,
+          sortBy: _sortBy,
+        );
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Katalog & Eksplorasi'),
             actions: [
-              // Google Maps API Key Setting
-              IconButton(
-                icon: const Icon(Icons.key_rounded, color: AppColors.primary),
-                tooltip: 'Pengaturan Google Maps API',
-                onPressed: _openGoogleMapsApiKeyDialog,
-              ),
-              // Open Map Screen (Fleaflet)
+              // Open Map Screen
               IconButton(
                 icon: const Icon(Icons.map_rounded, color: AppColors.primary),
-                tooltip: 'Peta Interaktif Fleaflet',
+                tooltip: 'Peta Interaktif Wisata',
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -497,12 +327,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             setState(() {
                               _searchQuery = val;
                             });
-                            if (_useGooglePlaces) {
-                              _searchGooglePlaces(val);
-                            }
                           },
                           decoration: InputDecoration(
-                            hintText: 'Cari tempat apa saja di Maps Bandung...',
+                            hintText: 'Cari destinasi wisata di Bandung...',
                             prefixIcon: const Icon(
                               Icons.search_rounded,
                               color: AppColors.primary,
@@ -570,47 +397,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
-                    // Google Maps Mode Filter Chip
-                    FilterChip(
-                      label: const Text('Google Maps (Bandung)'),
-                      avatar: Icon(
-                        Icons.place_rounded,
-                        size: 16,
-                        color: _useGooglePlaces
-                            ? Colors.white
-                            : Colors.blueAccent,
-                      ),
-                      selected: _useGooglePlaces,
-                      onSelected: (val) {
-                        setState(() {
-                          _useGooglePlaces = val;
-                        });
-                        if (val) {
-                          _searchGooglePlaces(_searchQuery);
-                        }
-                      },
-                      selectedColor: Colors.blueAccent,
-                      checkmarkColor: Colors.white,
-                      labelStyle: TextStyle(
-                        color: _useGooglePlaces
-                            ? Colors.white
-                            : AppColors.getTextPrimary(context),
-                        fontWeight: _useGooglePlaces
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        fontSize: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: _useGooglePlaces
-                              ? Colors.blueAccent
-                              : AppColors.getBorderColor(context),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
                     // Favorite filter chip
                     FilterChip(
                       label: const Text('Favorit'),
@@ -683,50 +469,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ],
                 ),
               ),
-
-              if (_isSearchingGooglePlaces)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
-
-              if (_useGooglePlaces)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blueAccent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.blueAccent.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 15,
-                          color: Colors.blueAccent,
-                        ),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Mode Google Maps Aktif: Wisata & foto dibatasi area Bandung Raya.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.blueAccent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
 
               // Results count and active filter indicators
               Padding(

@@ -9,7 +9,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../models/destination.dart';
-import '../../../services/google_places_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/map_service.dart';
 import '../../../services/sensor_service.dart';
@@ -28,7 +27,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
   final DestinationRepository _repository = DestinationRepository();
-  final GooglePlacesService _placesService = GooglePlacesService();
   final SensorService _sensorService = SensorService();
 
   final TextEditingController _searchController = TextEditingController();
@@ -143,37 +141,18 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       _showSearchResults = true;
     });
 
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
-      // 1. Search local repository destinations first
+    _debounceTimer = Timer(const Duration(milliseconds: 250), () {
       final localMatches = _repository.allDestinations.where((d) {
         final queryLower = q.toLowerCase();
         return d.name.toLowerCase().contains(queryLower) ||
             d.address.toLowerCase().contains(queryLower) ||
             d.category.toLowerCase().contains(queryLower) ||
             d.tags.any((t) => t.toLowerCase().contains(queryLower));
-      }).toList();
-
-      // 2. Search live maps across Bandung (Google Places / OpenStreetMap)
-      List<Destination> mapMatches = [];
-      try {
-        mapMatches = await _placesService.searchBandungDestinations(q);
-      } catch (_) {}
-
-      // 3. Merge & Deduplicate
-      final Map<String, Destination> combined = {};
-      for (final d in localMatches) {
-        combined[d.name.toLowerCase().trim()] = d;
-      }
-      for (final m in mapMatches) {
-        final key = m.name.toLowerCase().trim();
-        if (!combined.containsKey(key)) {
-          combined[key] = m;
-        }
-      }
+      }).take(8).toList();
 
       if (mounted) {
         setState(() {
-          _searchResults = combined.values.take(8).toList();
+          _searchResults = localMatches;
           _isSearching = false;
         });
       }
@@ -539,7 +518,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                           controller: _searchController,
                           onChanged: _onSearchChanged,
                           decoration: const InputDecoration(
-                            hintText: 'Cari tempat apa saja di Maps Bandung...',
+                            hintText: 'Cari destinasi wisata di Bandung...',
                             hintStyle: TextStyle(
                               fontSize: 13,
                               color: AppColors.textSecondaryLight,

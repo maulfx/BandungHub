@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../dummy/dummy_destinations.dart';
 import '../../models/destination.dart';
-import '../../services/google_places_service.dart';
 import '../../services/supabase_service.dart';
 
 enum DestinationSortBy {
@@ -124,11 +123,5 @@ class DestinationRepository extends ChangeNotifier {
     }
 
     return result;
-  }
-
-  /// Search tourist destinations from Google Places API strictly restricted to Bandung
-  Future<List<Destination>> searchGooglePlacesBandung(String query) async {
-    final placesService = GooglePlacesService();
-    return await placesService.searchBandungDestinations(query);
   }
 }
