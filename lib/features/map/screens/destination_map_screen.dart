@@ -93,19 +93,35 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       setState(() => _isLocating = false);
 
       if (position != null) {
+        final userPos = LatLng(position.latitude, position.longitude);
+        final isInsideBandung = MapService.bandungBounds.contains(userPos);
+
         setState(() {
-          _userLocation = LatLng(position.latitude, position.longitude);
+          _userLocation = userPos;
         });
 
         if (showNotice) {
-          _mapController.move(_userLocation!, 14.5);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Lokasi Anda berhasil ditemukan!'),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 1),
-            ),
-          );
+          if (isInsideBandung) {
+            _mapController.move(userPos, 14.5);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Lokasi Anda di Bandung berhasil ditemukan!'),
+                backgroundColor: AppColors.success,
+                duration: Duration(seconds: 1),
+              ),
+            );
+          } else {
+            _mapController.move(LocationService.defaultBandungCenter, 12.5);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'GPS mendeteksi Anda di luar Bandung. Peta difokuskan khusus ke wilayah Bandung.',
+                ),
+                backgroundColor: AppColors.secondary,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
         }
       } else if (showNotice) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -365,8 +381,9 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   ? widget.initialDestination!.coordinates
                   : LocationService.defaultBandungCenter,
               initialZoom: widget.initialDestination != null ? 14.5 : 12.0,
-              minZoom: 8.5,
+              minZoom: 10.0,
               maxZoom: 18.0,
+              cameraConstraint: MapService.bandungCameraConstraint,
               onTap: (tapPosition, point) {
                 FocusScope.of(context).unfocus();
                 setState(() {

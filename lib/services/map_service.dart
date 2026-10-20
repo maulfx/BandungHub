@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MapService {
@@ -7,6 +9,25 @@ class MapService {
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const String userAgentPackageName = 'com.example.projek_akhir';
   static const String osmAttribution = '© OpenStreetMap contributors';
+
+  // Bandung Raya Geographic Boundaries
+  // Covers Kota Bandung, Kab. Bandung, Kab. Bandung Barat, and Kota Cimahi
+  // North: Tangkuban Parahu / Lembang (~ -6.70)
+  // South: Ciwidey / Pangalengan (~ -7.26)
+  // West: Padalarang / Citatah (~ 107.38)
+  // East: Cileunyi / Manglayang (~ 107.82)
+  static const double bandungMinLat = -7.30;
+  static const double bandungMaxLat = -6.68;
+  static const double bandungMinLng = 107.35;
+  static const double bandungMaxLng = 107.88;
+
+  static LatLngBounds get bandungBounds => LatLngBounds(
+        const LatLng(bandungMinLat, bandungMinLng),
+        const LatLng(bandungMaxLat, bandungMaxLng),
+      );
+
+  static CameraConstraint get bandungCameraConstraint =>
+      CameraConstraint.containCenter(bounds: bandungBounds);
 
   // Opens external navigation app (Google Maps, Waze, etc.)
   static Future<bool> openExternalMapNavigation({

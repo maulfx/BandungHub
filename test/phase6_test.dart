@@ -70,6 +70,21 @@ void main() {
       expect(MapService.userAgentPackageName.isNotEmpty, isTrue);
       expect(MapService.osmAttribution, contains('OpenStreetMap'));
     });
+
+    test('MapService restricts bounds strictly to Bandung Raya', () {
+      final bounds = MapService.bandungBounds;
+      // Valid Bandung coordinates
+      expect(bounds.contains(const LatLng(-6.917464, 107.619123)), isTrue); // Alun-alun
+      expect(bounds.contains(const LatLng(-6.902476, 107.618774)), isTrue); // Gedung Sate
+      expect(bounds.contains(const LatLng(-6.759637, 107.609780)), isTrue); // Tangkuban Parahu
+      expect(bounds.contains(const LatLng(-7.166203, 107.402123)), isTrue); // Kawah Putih
+
+      // Outside Bandung coordinates
+      expect(bounds.contains(const LatLng(-6.2088, 106.8456)), isFalse); // Monas Jakarta
+      expect(bounds.contains(const LatLng(-8.4095, 115.1889)), isFalse); // Bali
+      expect(bounds.contains(const LatLng(-7.7956, 110.3695)), isFalse); // Malioboro Yogyakarta
+      expect(bounds.contains(const LatLng(-7.2575, 112.7521)), isFalse); // Surabaya
+    });
   });
 
   group('Phase 6 - DestinationMapScreen Widget Tests', () {
