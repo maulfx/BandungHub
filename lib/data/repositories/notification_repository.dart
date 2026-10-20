@@ -237,9 +237,9 @@ class NotificationRepository extends ChangeNotifier {
 
   Future<void> triggerQuizReminder() async {
     await sendInstantNotification(
-      title: 'Tantangan Kuis Bandung Hari Ini! 🏆',
+      title: 'Tantangan Bocchi Jumpy! 🎸🧗',
       body:
-          'Uji wawasan Anda seputar ikon dan sejarah kota kembang di Mini Game BandungHub.',
+          'Ayo bantu Bocchi melompat setinggi mungkin melintasi platform kayu dan pecahkan rekor baru!',
       type: NotificationType.quizReminder,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../models/user_profile.dart';
 import '../../../shared/widgets/google_logo_icon.dart';
 import '../../navigation/main_navigation_screen.dart';
 import 'pin_lock_screen.dart';
@@ -23,6 +24,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   String? _errorMessage;
+  bool _canUseBiometrics = false;
+  UserProfile? _biometricUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final canBio = await _authRepo.canUseBiometricLogin();
+    if (canBio) {
+      final user = await _authRepo.getBiometricUser();
+      if (mounted) {
+        setState(() {
+          _canUseBiometrics = true;
+          _biometricUser = user;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _canUseBiometrics = false;
+          _biometricUser = null;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -66,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         setState(() {
           _errorMessage =
-              'Email atau kata sandi tidak cocok. Gunakan akun demo atau daftar baru.';
+              'Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftar baru.';
         });
       }
     }
@@ -292,18 +321,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<void> _handleDemoLogin() async {
-    await _authRepo.loginAsDemo();
-    if (mounted) {
-      _navigateForward();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Masuk sebagai Akun Demo (Wisatawan Bandung)'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
-    }
-  }
 
   Future<void> _handleGuestLogin() async {
     await _authRepo.loginAsGuest();
@@ -392,6 +409,100 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
+
+                // Quick Biometric Login for Returning Authenticated User
+                if (_canUseBiometrics && _biometricUser != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.fingerprint_rounded,
+                                color: AppColors.primary,
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Masuk Cepat Biometrik',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Lanjutkan sebagai ${_biometricUser!.name}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.getTextSecondary(context),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _handleBiometricLogin,
+                          icon: const Icon(Icons.fingerprint_rounded, size: 20),
+                          label: const Text(
+                            'Pindai Sidik Jari / Wajah',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'atau masukkan email & sandi',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.getTextSecondary(context),
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.grey.shade300)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Error Message if any
                 if (_errorMessage != null) ...[
@@ -507,59 +618,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                 ),
-                const SizedBox(height: 14),
-
-                // Quick Biometric & PIN Login Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _handleBiometricLogin,
-                        icon: const Icon(Icons.fingerprint_rounded, size: 20),
-                        label: const Text(
-                          'Biometrik',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PinLockScreen(
-                                mode: PinScreenMode.verify,
-                                onVerified: () {
-                                  Navigator.pop(context);
-                                  _navigateForward();
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.pin_rounded, size: 20),
-                        label: const Text(
-                          'Masuk PIN',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 20),
 
                 // Divider Or
@@ -610,34 +668,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Demo User Instant Button (For Reviewers)
-                OutlinedButton.icon(
-                  onPressed: _handleDemoLogin,
-                  icon: const Icon(
-                    Icons.badge_rounded,
-                    color: AppColors.secondary,
-                  ),
-                  label: const Text(
-                    'Masuk Cepat Akun Demo (1-Click)',
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(
-                      color: AppColors.secondary,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
 
                 // Guest Login
                 TextButton(

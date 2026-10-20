@@ -141,11 +141,45 @@ void main() {
       expect(repo.userEmail, 'test.user@gmail.com');
       expect(repo.currentUser?.authProvider, 'google');
     });
+
+    test('AuthRepository Admin login with email & password sets admin role', () async {
+      final repo = AuthRepository();
+      await repo.init();
+
+      // Login with admin credentials
+      final loggedIn = await repo.loginWithEmailPassword(
+        'admin@bandunghub.id',
+        'admin123',
+      );
+      expect(loggedIn, isTrue);
+      expect(repo.isLoggedIn, isTrue);
+      expect(repo.isAdmin, isTrue);
+      expect(repo.userEmail, 'admin@bandunghub.id');
+      expect(repo.userName, 'Administrator BandungHub');
+      expect(repo.currentUser?.role, 'admin');
+
+      // Admin PIN verification
+      expect(await repo.loginWithPin('123456'), isTrue);
+      expect(await repo.loginWithPin('000000'), isFalse);
+    });
+
+    test(
+        'Biometric login is disallowed for unauthenticated users without prior biometric setup',
+        () async {
+      final repo = AuthRepository();
+      await repo.logout();
+
+      final canBio = await repo.canUseBiometricLogin();
+      expect(canBio, isFalse);
+
+      final bioLoginSuccess = await repo.loginWithBiometrics();
+      expect(bioLoginSuccess, isFalse);
+    });
   });
 
   group('Phase 2 - UI Widget Tests', () {
     testWidgets(
-      'LoginScreen renders email, password, demo button, guest button, and google button',
+      'LoginScreen renders email, password, guest button, and google button',
       (tester) async {
         tester.view.physicalSize = const Size(800, 1400);
         tester.view.devicePixelRatio = 1.0;
@@ -159,7 +193,6 @@ void main() {
         expect(find.text('Kata Sandi'), findsOneWidget);
         expect(find.byKey(const Key('btn_google_sign_in')), findsOneWidget);
         expect(find.text('Masuk dengan Google'), findsOneWidget);
-        expect(find.text('Masuk Cepat Akun Demo (1-Click)'), findsOneWidget);
         expect(
           find.text('Lanjutkan sebagai Tamu (Guest Mode)'),
           findsOneWidget,
@@ -253,6 +286,30 @@ void main() {
         expect(find.text('Keamanan & Privasi (Phase 2)'), findsOneWidget);
         expect(find.text('Autentikasi Biometrik'), findsOneWidget);
         expect(find.text('Keluar dari Akun'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ProfileScreen displays Administrator badge and overview panel when logged in as admin',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final repo = AuthRepository();
+        await repo.loginWithEmailPassword('admin@bandunghub.id', 'admin123');
+
+        await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Administrator BandungHub'), findsOneWidget);
+        expect(find.text('admin@bandunghub.id'), findsOneWidget);
+        expect(
+          find.text('Hak Akses: Administrator BandungHub'),
+          findsOneWidget,
+        );
+        expect(find.text('Panel Kontrol Administrator'), findsOneWidget);
+        expect(find.text('SUPER ADMIN'), findsOneWidget);
       },
     );
   });

@@ -11,6 +11,7 @@ class AuthStorage {
   static const String _keyRegisteredUsers = 'bandunghub_registered_users';
   static const String _keySessionToken = 'bandunghub_session_token';
   static const String _keyPassHashPrefix = 'bandunghub_pwd_';
+  static const String _keyBiometricUserEmail = 'bandunghub_biometric_user_email';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _useSecureStorage = true;
@@ -103,12 +104,31 @@ class AuthStorage {
     await _safeWrite('$_keyPassHashPrefix${email.toLowerCase()}', passwordHash);
   }
 
+  // Biometric authorization tracking for returning users
+  Future<void> saveBiometricUserEmail(String email) async {
+    await _safeWrite(_keyBiometricUserEmail, email.toLowerCase());
+  }
+
+  Future<String?> getBiometricUserEmail() async {
+    return await _safeRead(_keyBiometricUserEmail);
+  }
+
+  Future<void> clearBiometricUserEmail() async {
+    await _safeDelete(_keyBiometricUserEmail);
+  }
+
   // Verify email password
   Future<bool> verifyPassword(String email, String passwordHash) async {
-    final stored = await _safeRead('$_keyPassHashPrefix${email.toLowerCase()}');
+    final cleanEmail = email.toLowerCase().trim();
+    final stored = await _safeRead('$_keyPassHashPrefix$cleanEmail');
     if (stored == null) {
-      // If demo user email, accept demo password
-      if (email.toLowerCase() == 'traveler@bandunghub.id') {
+      // Default Admin account: admin@bandunghub.id / admin123
+      if (cleanEmail == 'admin@bandunghub.id' ||
+          cleanEmail == 'admin@gmail.com') {
+        return passwordHash == UserProfile.hashSecret('admin123');
+      }
+      // Demo user email
+      if (cleanEmail == 'traveler@bandunghub.id') {
         return passwordHash == UserProfile.hashSecret('bandung123') ||
             passwordHash == UserProfile.hashSecret('123456');
       }
@@ -122,9 +142,13 @@ class AuthStorage {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_keyRegisteredUsers);
     if (raw == null || raw.isEmpty) {
-      // Seed with demo user
+      // Seed with admin and demo user
+      final admin = UserProfile.admin();
       final demo = UserProfile.demoUser();
-      return {demo.email.toLowerCase(): demo};
+      return {
+        admin.email.toLowerCase(): admin,
+        demo.email.toLowerCase(): demo,
+      };
     }
     try {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
@@ -132,6 +156,10 @@ class AuthStorage {
       decoded.forEach((key, value) {
         map[key] = UserProfile.fromMap(value as Map<String, dynamic>);
       });
+      // Ensure admin user is present
+      if (!map.containsKey('admin@bandunghub.id')) {
+        map['admin@bandunghub.id'] = UserProfile.admin();
+      }
       // Ensure demo user is present
       if (!map.containsKey('traveler@bandunghub.id')) {
         map['traveler@bandunghub.id'] = UserProfile.demoUser();
@@ -139,8 +167,12 @@ class AuthStorage {
       return map;
     } catch (e) {
       debugPrint('Error parsing registered users: $e');
+      final admin = UserProfile.admin();
       final demo = UserProfile.demoUser();
-      return {demo.email.toLowerCase(): demo};
+      return {
+        admin.email.toLowerCase(): admin,
+        demo.email.toLowerCase(): demo,
+      };
     }
   }
 }

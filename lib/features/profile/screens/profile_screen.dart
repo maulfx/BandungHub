@@ -270,15 +270,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 46,
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: 0.12,
-                        ),
+                        backgroundColor: (_authRepo.isAdmin
+                                ? const Color(0xFF673AB7)
+                                : AppColors.primary)
+                            .withValues(alpha: 0.12),
                         child: Icon(
-                          isGuest
-                              ? Icons.person_outline_rounded
-                              : Icons.person_rounded,
+                          _authRepo.isAdmin
+                              ? Icons.admin_panel_settings_rounded
+                              : (isGuest
+                                  ? Icons.person_outline_rounded
+                                  : Icons.person_rounded),
                           size: 50,
-                          color: AppColors.primary,
+                          color: _authRepo.isAdmin
+                              ? const Color(0xFF673AB7)
+                              : AppColors.primary,
                         ),
                       ),
                       Positioned(
@@ -287,16 +292,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: isGuest
-                                ? AppColors.secondary
-                                : AppColors.success,
+                            color: _authRepo.isAdmin
+                                ? const Color(0xFF673AB7)
+                                : (isGuest
+                                    ? AppColors.secondary
+                                    : AppColors.success),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
                           child: Icon(
-                            isGuest
-                                ? Icons.hiking_rounded
-                                : Icons.verified_user_rounded,
+                            _authRepo.isAdmin
+                                ? Icons.verified_rounded
+                                : (isGuest
+                                    ? Icons.hiking_rounded
+                                    : Icons.verified_user_rounded),
                             size: 14,
                             color: Colors.white,
                           ),
@@ -329,39 +338,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // Status chip
                 Builder(
                   builder: (context) {
+                    final isAdmin = _authRepo.isAdmin;
                     final provider = _authRepo.currentUser?.authProvider ?? 'email';
                     final isGoogle = provider == 'google';
+                    final badgeColor = isAdmin
+                        ? const Color(0xFF673AB7)
+                        : (isGuest
+                            ? AppColors.warning
+                            : (isGoogle ? Colors.blue.shade800 : AppColors.success));
+
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: 12,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: (isGuest
-                                ? AppColors.warning
-                                : (isGoogle ? Colors.blue : AppColors.success))
-                            .withValues(alpha: 0.12),
+                        color: badgeColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: badgeColor.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isGoogle) ...[
+                          if (isAdmin) ...[
+                            const Icon(
+                              Icons.shield_rounded,
+                              size: 14,
+                              color: Color(0xFF673AB7),
+                            ),
+                            const SizedBox(width: 6),
+                          ] else if (isGoogle) ...[
                             const GoogleLogoIcon(size: 14),
                             const SizedBox(width: 6),
                           ],
                           Text(
-                            isGuest
-                                ? 'Mode Tamu (Guest Traveler)'
-                                : (isGoogle
-                                    ? 'Terverifikasi Akun Google'
-                                    : 'Akun Resmi Terverifikasi'),
+                            isAdmin
+                                ? 'Hak Akses: Administrator BandungHub'
+                                : (isGuest
+                                    ? 'Mode Tamu (Guest Traveler)'
+                                    : (isGoogle
+                                        ? 'Terverifikasi Akun Google'
+                                        : 'Akun Resmi Terverifikasi')),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isGuest
-                                  ? AppColors.warning
-                                  : (isGoogle ? Colors.blue.shade800 : AppColors.success),
+                              color: badgeColor,
                             ),
                           ),
                         ],
@@ -370,6 +393,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
+
+                // Administrator Overview Card (if admin)
+                if (_authRepo.isAdmin) ...[
+                  _buildAdminOverviewCard(context),
+                  const SizedBox(height: 20),
+                ],
 
                 // Guest Login CTA Card (if guest)
                 if (isGuest) ...[
@@ -923,6 +952,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAdminOverviewCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF673AB7).withValues(alpha: 0.12),
+            AppColors.primary.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF673AB7).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF673AB7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Panel Kontrol Administrator',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF673AB7),
+                      ),
+                    ),
+                    Text(
+                      'Hak Akses Penuh Sistem BandungHub',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF673AB7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'SUPER ADMIN',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAdminStatTile(
+                  icon: Icons.place_rounded,
+                  label: 'Destinasi',
+                  value: '13 Wisata',
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAdminStatTile(
+                  icon: Icons.auto_awesome_rounded,
+                  label: 'Gemini AI',
+                  value: 'Online',
+                  color: const Color(0xFF2E7D32),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildAdminStatTile(
+                  icon: Icons.screen_rotation_rounded,
+                  label: 'Sensor',
+                  value: 'Gyro + Kompas',
+                  color: const Color(0xFFE65100),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminStatTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.textSecondaryLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

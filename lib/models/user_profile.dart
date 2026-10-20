@@ -10,6 +10,7 @@ class UserProfile {
   final String? pinHash;
   final bool isBiometricEnabled;
   final bool isGuest;
+  final String role; // 'admin', 'user', 'guest'
   final String authProvider; // 'email', 'google', 'guest', 'demo'
   final DateTime createdAt;
   final DateTime lastLoginAt;
@@ -22,12 +23,14 @@ class UserProfile {
     this.pinHash,
     this.isBiometricEnabled = false,
     this.isGuest = false,
+    this.role = 'user',
     this.authProvider = 'email',
     required this.createdAt,
     required this.lastLoginAt,
   });
 
   bool get hasPin => pinHash != null && pinHash!.isNotEmpty;
+  bool get isAdmin => role == 'admin';
 
   // Static helper to hash PIN or Password
   static String hashSecret(String secret) {
@@ -41,6 +44,23 @@ class UserProfile {
     return hashSecret(pin) == pinHash;
   }
 
+  // Factory for Admin User
+  factory UserProfile.admin() {
+    return UserProfile(
+      id: 'admin_001',
+      name: 'Administrator BandungHub',
+      email: 'admin@bandunghub.id',
+      avatarUrl: null,
+      pinHash: hashSecret('123456'),
+      role: 'admin',
+      isBiometricEnabled: false,
+      isGuest: false,
+      authProvider: 'email',
+      createdAt: DateTime(2026, 1, 1),
+      lastLoginAt: DateTime.now(),
+    );
+  }
+
   // Factory for default Demo User
   factory UserProfile.demoUser() {
     return UserProfile(
@@ -49,6 +69,7 @@ class UserProfile {
       email: 'traveler@bandunghub.id',
       avatarUrl: null,
       pinHash: hashSecret('123456'),
+      role: 'user',
       isBiometricEnabled: true,
       isGuest: false,
       authProvider: 'demo',
@@ -79,13 +100,16 @@ class UserProfile {
     required String email,
     String? avatarUrl,
   }) {
+    final cleanEmail = email.toLowerCase().trim();
+    final isAdmin = cleanEmail == 'admin@bandunghub.id' || cleanEmail == 'admin@gmail.com';
     return UserProfile(
       id: 'google_${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
+      name: isAdmin ? 'Administrator BandungHub' : name,
       email: email,
       avatarUrl: avatarUrl ??
           'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      pinHash: null,
+      pinHash: isAdmin ? hashSecret('123456') : null,
+      role: isAdmin ? 'admin' : 'user',
       isBiometricEnabled: false,
       isGuest: false,
       authProvider: 'google',
@@ -102,6 +126,7 @@ class UserProfile {
     String? pinHash,
     bool? isBiometricEnabled,
     bool? isGuest,
+    String? role,
     String? authProvider,
     DateTime? createdAt,
     DateTime? lastLoginAt,
@@ -114,6 +139,7 @@ class UserProfile {
       pinHash: pinHash ?? this.pinHash,
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
       isGuest: isGuest ?? this.isGuest,
+      role: role ?? this.role,
       authProvider: authProvider ?? this.authProvider,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
@@ -129,6 +155,7 @@ class UserProfile {
       'pinHash': pinHash,
       'isBiometricEnabled': isBiometricEnabled ? 1 : 0,
       'isGuest': isGuest ? 1 : 0,
+      'role': role,
       'authProvider': authProvider,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
@@ -147,6 +174,7 @@ class UserProfile {
       isBiometricEnabled:
           (map['isBiometricEnabled'] == 1 || map['isBiometricEnabled'] == true),
       isGuest: isGuestVal,
+      role: map['role'] as String? ?? 'user',
       authProvider: map['authProvider'] as String? ??
           (isGuestVal ? 'guest' : 'email'),
       createdAt: map['createdAt'] != null

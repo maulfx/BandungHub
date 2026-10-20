@@ -18,7 +18,7 @@ void main() {
       // Search for Ciwidey
       final result2 = repo.filterDestinations(query: 'Ciwidey');
       expect(result2.isNotEmpty, true);
-      expect(result2.first.name, contains('Kawah Putih'));
+      expect(result2.any((d) => d.name.contains('Kawah Putih')), isTrue);
 
       // Non-existent search query
       final result3 = repo.filterDestinations(

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../dummy/dummy_destinations.dart';
 import '../../models/destination.dart';
+import '../../services/google_places_service.dart';
 import '../../services/supabase_service.dart';
 
 enum DestinationSortBy {
@@ -30,11 +31,15 @@ class DestinationRepository extends ChangeNotifier {
       try {
         final cloud = await sb.fetchDestinations();
         if (cloud.isNotEmpty) {
+          final Map<String, Destination> merged = {
+            for (final d in DummyDestinations.list) d.id: d,
+          };
+          for (final c in cloud) {
+            merged[c.id] = c;
+          }
           _allDestinations.clear();
-          _allDestinations.addAll(cloud);
+          _allDestinations.addAll(merged.values);
           notifyListeners();
-        } else {
-          await sb.seedDestinationsIfEmpty(DummyDestinations.list);
         }
       } catch (e) {
         debugPrint('Fetch cloud destinations error: $e');
@@ -119,5 +124,11 @@ class DestinationRepository extends ChangeNotifier {
     }
 
     return result;
+  }
+
+  /// Search tourist destinations from Google Places API strictly restricted to Bandung
+  Future<List<Destination>> searchGooglePlacesBandung(String query) async {
+    final placesService = GooglePlacesService();
+    return await placesService.searchBandungDestinations(query);
   }
 }

@@ -118,6 +118,38 @@ class SupabaseService {
     }
   }
 
+  /// Sinkronisasi / Upsert daftar destinasi ke Supabase Cloud
+  Future<void> upsertDestinations(List<Destination> destinations) async {
+    final sb = client;
+    if (sb == null) return;
+
+    try {
+      final data = destinations.map((d) {
+        return {
+          'id': d.id,
+          'name': d.name,
+          'description': d.description,
+          'category': d.category,
+          'address': d.address,
+          'latitude': d.latitude,
+          'longitude': d.longitude,
+          'estimated_price': d.estimatedPrice,
+          'operational_hours': d.operationalHours,
+          'image_url': d.imageUrl,
+          'rating': d.rating,
+          'review_count': d.reviewCount,
+          'is_verified': d.isVerified,
+          'tags': d.tags,
+        };
+      }).toList();
+
+      await sb.from('destinations').upsert(data);
+      debugPrint('✅ [SupabaseService] Berhasil sinkronisasi ${destinations.length} destinasi ke cloud.');
+    } catch (e) {
+      debugPrint('⚠️ Error upsertDestinations: $e');
+    }
+  }
+
   // ==========================================
   // 2. ITINERARIES (RENCANA PERJALANAN)
   // ==========================================

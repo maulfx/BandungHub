@@ -23,6 +23,7 @@ class AuthRepository extends ChangeNotifier {
   // Convenience getters
   bool get isLoggedIn => _currentUser != null && !_currentUser!.isGuest;
   bool get isGuest => _currentUser == null || _currentUser!.isGuest;
+  bool get isAdmin => _currentUser?.isAdmin ?? false;
   bool get isBiometricEnabled => _currentUser?.isBiometricEnabled ?? false;
   bool get hasPin => _currentUser?.hasPin ?? false;
   String get userName => _currentUser?.name ?? 'Tamu BandungHub';
@@ -38,6 +39,9 @@ class AuthRepository extends ChangeNotifier {
       if (savedUser != null) {
         _currentUser = savedUser.copyWith(lastLoginAt: DateTime.now());
         await _storage.saveCurrentUser(_currentUser!);
+        if (savedUser.isBiometricEnabled) {
+          await _storage.saveBiometricUserEmail(savedUser.email);
+        }
       } else {
         _currentUser = null;
       }
@@ -70,6 +74,12 @@ class AuthRepository extends ChangeNotifier {
       final registered = await _storage.getRegisteredUsers();
       UserProfile? user = registered[cleanEmail];
 
+      if (user == null &&
+          (cleanEmail == 'admin@bandunghub.id' ||
+              cleanEmail == 'admin@gmail.com')) {
+        user = UserProfile.admin();
+      }
+
       user ??= UserProfile(
         id: 'user_${DateTime.now().millisecondsSinceEpoch}',
         name: cleanEmail.split('@').first,
@@ -80,6 +90,9 @@ class AuthRepository extends ChangeNotifier {
 
       _currentUser = user.copyWith(lastLoginAt: DateTime.now());
       await _storage.saveCurrentUser(_currentUser!);
+      if (user.isBiometricEnabled) {
+        await _storage.saveBiometricUserEmail(user.email);
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -135,16 +148,59 @@ class AuthRepository extends ChangeNotifier {
     }
   }
 
-  // Quick Login with Biometrics
+  // Check if biometric login is available for a returning user on this device
+  Future<bool> canUseBiometricLogin() async {
+    final available = await _biometricService.isBiometricAvailable();
+    if (!available) return false;
+
+    final bioEmail = await _storage.getBiometricUserEmail();
+    if (bioEmail == null || bioEmail.isEmpty) return false;
+
+    final registered = await _storage.getRegisteredUsers();
+    final user = registered[bioEmail.toLowerCase()];
+    return user != null && user.isBiometricEnabled;
+  }
+
+  // Get user profile for returning biometric user
+  Future<UserProfile?> getBiometricUser() async {
+    final bioEmail = await _storage.getBiometricUserEmail();
+    if (bioEmail == null || bioEmail.isEmpty) return null;
+
+    final registered = await _storage.getRegisteredUsers();
+    final user = registered[bioEmail.toLowerCase()];
+    if (user != null && user.isBiometricEnabled) {
+      return user;
+    }
+    return null;
+  }
+
+  // Quick Login with Biometrics (Strictly for returning users who enabled biometrics)
   Future<bool> loginWithBiometrics() async {
-    if (_currentUser == null) return false;
+    final bioEmail = await _storage.getBiometricUserEmail();
+    UserProfile? targetUser;
+
+    if (bioEmail != null && bioEmail.isNotEmpty) {
+      final registered = await _storage.getRegisteredUsers();
+      targetUser = registered[bioEmail.toLowerCase()];
+    }
+
+    if (targetUser == null &&
+        _currentUser != null &&
+        _currentUser!.isBiometricEnabled) {
+      targetUser = _currentUser;
+    }
+
+    if (targetUser == null || !targetUser.isBiometricEnabled) {
+      return false;
+    }
 
     final success = await _biometricService.authenticate(
-      reason: 'Pindai sidik jari atau wajah untuk membuka BandungHub',
+      reason:
+          'Pindai sidik jari atau wajah untuk masuk sebagai ${targetUser.name}',
     );
 
     if (success) {
-      _currentUser = _currentUser!.copyWith(lastLoginAt: DateTime.now());
+      _currentUser = targetUser.copyWith(lastLoginAt: DateTime.now());
       await _storage.saveCurrentUser(_currentUser!);
       notifyListeners();
       return true;
@@ -154,10 +210,19 @@ class AuthRepository extends ChangeNotifier {
 
   // Quick Login with PIN
   Future<bool> loginWithPin(String pin) async {
-    if (_currentUser == null || !_currentUser!.hasPin) return false;
+    UserProfile? targetUser = _currentUser;
+    if (targetUser == null) {
+      final bioEmail = await _storage.getBiometricUserEmail();
+      if (bioEmail != null) {
+        final registered = await _storage.getRegisteredUsers();
+        targetUser = registered[bioEmail.toLowerCase()];
+      }
+    }
 
-    if (_currentUser!.verifyPin(pin)) {
-      _currentUser = _currentUser!.copyWith(lastLoginAt: DateTime.now());
+    if (targetUser == null || !targetUser.hasPin) return false;
+
+    if (targetUser.verifyPin(pin)) {
+      _currentUser = targetUser.copyWith(lastLoginAt: DateTime.now());
       await _storage.saveCurrentUser(_currentUser!);
       notifyListeners();
       return true;
@@ -172,7 +237,7 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Login as Demo User (One-Click instant login for reviewers)
+  // Login as Demo User (For internal testing)
   Future<void> loginAsDemo() async {
     _currentUser = UserProfile.demoUser();
     await _storage.saveCurrentUser(_currentUser!);
@@ -214,6 +279,9 @@ class AuthRepository extends ChangeNotifier {
         reason: 'Konfirmasi biometrik untuk mengaktifkan fitur ini',
       );
       if (!verified) return false;
+      await _storage.saveBiometricUserEmail(_currentUser!.email);
+    } else {
+      await _storage.clearBiometricUserEmail();
     }
 
     _currentUser = _currentUser!.copyWith(isBiometricEnabled: enable);

@@ -35,14 +35,11 @@ void main() {
       print('Current destinations in Supabase: ${destinations.length}');
 
       if (destinations.isEmpty) {
-        print('[2] Table "destinations" is empty. Seeding dummy destinations to Supabase...');
-        await service.seedDestinationsIfEmpty(DummyDestinations.list);
-        final afterSeed = await service.fetchDestinations();
-        print('Destinations in Supabase after seeding: ${afterSeed.length}');
-        expect(afterSeed.length, greaterThan(0));
+        print('[2] Table "destinations" is empty.');
       } else {
-        print('✅ Successfully fetched ${destinations.length} destinations from Supabase!');
+        print('✅ Successfully fetched ${destinations.length} destinations from Supabase Cloud!');
       }
+      expect(destinations, isNotEmpty);
     } catch (e) {
       print('Error querying destinations table: $e');
       rethrow;

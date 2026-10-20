@@ -530,7 +530,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                               Icons.sports_esports_rounded,
                               size: 14,
                             ),
-                            label: const Text('Kuis Harian'),
+                            label: const Text('Jumpy Game'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,

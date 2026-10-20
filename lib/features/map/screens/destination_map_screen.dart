@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:intl/intl.dart';
@@ -5,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/dummy/dummy_destinations.dart';
+import '../../../data/repositories/destination_repository.dart';
 import '../../../models/destination.dart';
+import '../../../services/google_places_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/map_service.dart';
+import '../../../services/sensor_service.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
 
 class DestinationMapScreen extends StatefulWidget {
@@ -23,11 +27,31 @@ class DestinationMapScreen extends StatefulWidget {
 class _DestinationMapScreenState extends State<DestinationMapScreen> {
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
+  final DestinationRepository _repository = DestinationRepository();
+  final GooglePlacesService _placesService = GooglePlacesService();
+  final SensorService _sensorService = SensorService();
+
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   LatLng? _userLocation;
   bool _isLocating = false;
   String _selectedCategory = 'Semua';
   Destination? _selectedDestination;
+
+  // Search state
+  String _searchQuery = '';
+  List<Destination> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+
+  // Additional dynamic markers found via search
+  final List<Destination> _customSearchedMarkers = [];
+
+  // Compass & Accelerometer State
+  StreamSubscription<CompassOrientation>? _compassSub;
+  CompassOrientation _orientation = CompassOrientation.initial;
+  bool _isCompassFollowMode = false;
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
@@ -40,6 +64,26 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     super.initState();
     _selectedDestination = widget.initialDestination;
     _fetchUserLocation(showNotice: false);
+
+    // Listen to accelerometer / orientation compass stream
+    _sensorService.startListening();
+    _compassSub = _sensorService.orientationStream.listen((data) {
+      if (mounted) {
+        setState(() => _orientation = data);
+        if (_isCompassFollowMode) {
+          _mapController.rotate(_orientation.heading);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _compassSub?.cancel();
+    _sensorService.stopListening();
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchUserLocation({bool showNotice = true}) async {
@@ -79,11 +123,89 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     }
   }
 
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    final q = query.trim();
+
+    if (q.isEmpty) {
+      setState(() {
+        _searchQuery = '';
+        _searchResults = [];
+        _showSearchResults = false;
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _searchQuery = q;
+      _isSearching = true;
+      _showSearchResults = true;
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
+      // 1. Search local repository destinations first
+      final localMatches = _repository.allDestinations.where((d) {
+        final queryLower = q.toLowerCase();
+        return d.name.toLowerCase().contains(queryLower) ||
+            d.address.toLowerCase().contains(queryLower) ||
+            d.category.toLowerCase().contains(queryLower) ||
+            d.tags.any((t) => t.toLowerCase().contains(queryLower));
+      }).toList();
+
+      // 2. Search live maps across Bandung (Google Places / OpenStreetMap)
+      List<Destination> mapMatches = [];
+      try {
+        mapMatches = await _placesService.searchBandungDestinations(q);
+      } catch (_) {}
+
+      // 3. Merge & Deduplicate
+      final Map<String, Destination> combined = {};
+      for (final d in localMatches) {
+        combined[d.name.toLowerCase().trim()] = d;
+      }
+      for (final m in mapMatches) {
+        final key = m.name.toLowerCase().trim();
+        if (!combined.containsKey(key)) {
+          combined[key] = m;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _searchResults = combined.values.take(8).toList();
+          _isSearching = false;
+        });
+      }
+    });
+  }
+
+  void _selectSearchedDestination(Destination dest) {
+    FocusScope.of(context).unfocus();
+    _searchController.text = dest.name;
+
+    setState(() {
+      _showSearchResults = false;
+      _selectedDestination = dest;
+      // Ensure custom searched marker is pinned to map
+      if (!_customSearchedMarkers.any((m) => m.id == dest.id) &&
+          !_repository.allDestinations.any((d) => d.id == dest.id)) {
+        _customSearchedMarkers.add(dest);
+      }
+    });
+
+    _mapController.move(dest.coordinates, 15.0);
+  }
+
   void _openNearestDestinationsSheet() {
     final center = _userLocation ?? LocationService.defaultBandungCenter;
+    final allDests = [
+      ..._repository.allDestinations,
+      ..._customSearchedMarkers,
+    ];
     final nearest = _locationService.getNearestDestinations(
       userLocation: center,
-      destinations: DummyDestinations.list,
+      destinations: allDests,
     );
 
     showModalBottomSheet(
@@ -94,9 +216,9 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: AppColors.getCardColor(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +229,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Colors.grey.shade400,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -149,19 +271,17 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   color: AppColors.textSecondaryLight,
                 ),
               ),
-              const Divider(height: 20),
+              const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
                   itemCount: nearest.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
+                  separatorBuilder: (context, index) => const Divider(),
                   itemBuilder: (context, index) {
                     final item = nearest[index].key;
-                    final distKm = nearest[index].value;
-                    final catColor = AppColors.getCategoryColor(item.category);
+                    final distanceKm = nearest[index].value;
 
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      contentPadding: EdgeInsets.zero,
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
@@ -171,34 +291,55 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               Container(
-                                width: 50,
-                                height: 50,
-                                color: catColor.withValues(alpha: 0.15),
-                                child: Icon(
-                                  Icons.place_rounded,
-                                  color: catColor,
-                                ),
-                              ),
+                            width: 50,
+                            height: 50,
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            child: const Icon(
+                              Icons.place_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
                       ),
                       title: Text(
                         item.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       subtitle: Text(
-                        'Jarak Garis Lurus: ${_locationService.formatDistance(distKm)} • ${item.category}',
+                        '${item.category} • ${currencyFormatter.format(item.estimatedPrice)}',
                         style: const TextStyle(fontSize: 12),
                       ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 14,
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            _locationService.formatDistance(distanceKm),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Jarak',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ],
                       ),
                       onTap: () {
                         Navigator.pop(context);
                         setState(() {
                           _selectedDestination = item;
                         });
-                        _mapController.move(item.coordinates, 14.5);
+                        _mapController.move(item.coordinates, 15.0);
                       },
                     );
                   },
@@ -213,7 +354,13 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredDestinations = DummyDestinations.list.where((d) {
+    // Combine all destinations (local 37+ + dynamic searched map markers)
+    final allDestinations = [
+      ..._repository.allDestinations,
+      ..._customSearchedMarkers,
+    ];
+
+    final filteredDestinations = allDestinations.where((d) {
       return _selectedCategory == 'Semua' ||
           d.category.toLowerCase() == _selectedCategory.toLowerCase();
     }).toList();
@@ -231,22 +378,26 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       ),
       body: Stack(
         children: [
-          // 1. Fleaflet Map Widget
+          // 1. Fleaflet OpenStreetMap Widget
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: widget.initialDestination != null
                   ? widget.initialDestination!.coordinates
                   : LocationService.defaultBandungCenter,
-              initialZoom: widget.initialDestination != null ? 14.0 : 12.0,
+              initialZoom: widget.initialDestination != null ? 14.5 : 12.0,
               minZoom: 8.5,
               maxZoom: 18.0,
               onTap: (tapPosition, point) {
-                setState(() => _selectedDestination = null);
+                FocusScope.of(context).unfocus();
+                setState(() {
+                  _selectedDestination = null;
+                  _showSearchResults = false;
+                });
               },
             ),
             children: [
-              // OpenStreetMap Tile Layer with User Agent
+              // OpenStreetMap Tile Layer
               TileLayer(
                 urlTemplate: MapService.osmTileUrl,
                 userAgentPackageName: MapService.userAgentPackageName,
@@ -263,12 +414,14 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
                     return Marker(
                       point: dest.coordinates,
-                      width: isSelected ? 50 : 38,
-                      height: isSelected ? 50 : 38,
+                      width: isSelected ? 52 : 38,
+                      height: isSelected ? 52 : 38,
                       child: GestureDetector(
                         onTap: () {
+                          FocusScope.of(context).unfocus();
                           setState(() {
                             _selectedDestination = dest;
+                            _showSearchResults = false;
                           });
                           _mapController.move(dest.coordinates, 14.5);
                         },
@@ -281,11 +434,11 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Colors.white,
-                              width: isSelected ? 3 : 2,
+                              width: isSelected ? 3.5 : 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.25),
+                                color: Colors.black.withValues(alpha: 0.28),
                                 blurRadius: isSelected ? 8 : 4,
                                 offset: const Offset(0, 3),
                               ),
@@ -347,15 +500,159 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ],
           ),
 
-          // 2. Category Filter Pills on Top
+          // 2. Google Maps-Style Floating Search Bar on Top
           Positioned(
-            top: 12,
+            top: 10,
+            left: 14,
+            right: 14,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.getCardColor(context),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppColors.getBorderColor(context),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 14),
+                      const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.primary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: const InputDecoration(
+                            hintText: 'Cari tempat apa saja di Maps Bandung...',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      if (_isSearching)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else if (_searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Live Search Dropdown Sheet
+                if (_showSearchResults && _searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    decoration: BoxDecoration(
+                      color: AppColors.getCardColor(context),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.getBorderColor(context),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.16),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: _searchResults.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final item = _searchResults[index];
+                        return ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppColors.getCategoryColor(item.category)
+                                .withValues(alpha: 0.15),
+                            child: Icon(
+                              AppColors.getCategoryIcon(item.category),
+                              size: 14,
+                              color: AppColors.getCategoryColor(item.category),
+                            ),
+                          ),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            item.address,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 12,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                          onTap: () => _selectSearchedDestination(item),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // 3. Category Filter Pills on Top (Positioned below Search Bar)
+          Positioned(
+            top: 66,
             left: 0,
             right: 0,
             child: SizedBox(
               height: 38,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 scrollDirection: Axis.horizontal,
                 itemCount: AppConstants.categories.length,
                 separatorBuilder: (context, index) => const SizedBox(width: 8),
@@ -388,12 +685,100 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ),
           ),
 
-          // 3. Floating Map Controls (Right Side)
+          // 4. Compass Heading Badge (Top Left)
+          Positioned(
+            top: 114,
+            left: 14,
+            child: GestureDetector(
+              onTap: _showCompassInfoDialog,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color:
+                      AppColors.getCardColor(context).withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _isCompassFollowMode
+                        ? AppColors.primary
+                        : AppColors.getBorderColor(context),
+                    width: _isCompassFollowMode ? 2 : 1.2,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.rotate(
+                      angle: -_orientation.heading * (math.pi / 180),
+                      child: const Icon(
+                        Icons.navigation_rounded,
+                        color: Colors.redAccent,
+                        size: 15,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_orientation.heading.toInt()}° ${_orientation.cardinalDirection}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.getTextPrimary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 5. Floating Map Controls (Right Side)
           Positioned(
             right: 16,
             bottom: _selectedDestination != null ? 220 : 24,
             child: Column(
               children: [
+                // Compass Bearing (Accelerometer & Magnetometer)
+                FloatingActionButton.small(
+                  heroTag: 'compass_bearing',
+                  backgroundColor: _isCompassFollowMode
+                      ? AppColors.primary
+                      : Colors.white,
+                  foregroundColor: _isCompassFollowMode
+                      ? Colors.white
+                      : AppColors.primary,
+                  tooltip:
+                      'Kompas (${_orientation.heading.toInt()}° ${_orientation.cardinalDirection})',
+                  onPressed: _showCompassInfoDialog,
+                  child: Transform.rotate(
+                    angle: -_orientation.heading * (math.pi / 180),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(Icons.navigation_rounded, size: 20),
+                        Positioned(
+                          top: 2,
+                          child: Container(
+                            width: 3.5,
+                            height: 3.5,
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
                 // Zoom in
                 FloatingActionButton.small(
                   heroTag: 'zoom_in',
@@ -448,8 +833,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   onPressed: () => _fetchUserLocation(showNotice: true),
                   child: _isLocating
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
@@ -461,7 +846,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ),
           ),
 
-          // 4. Selected Destination Bottom Preview Card
+          // 5. Selected Destination Bottom Preview Card (Google Maps Style)
           if (_selectedDestination != null)
             Positioned(
               left: 16,
@@ -484,21 +869,21 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
                               _selectedDestination!.imageUrl,
-                              width: 72,
-                              height: 72,
+                              width: 74,
+                              height: 74,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                    width: 72,
-                                    height: 72,
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    child: const Icon(
-                                      Icons.place_rounded,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
+                                width: 74,
+                                height: 74,
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                child: const Icon(
+                                  Icons.place_rounded,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -591,7 +976,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _selectedDestination!.estimatedPrice <= 0
-                                      ? 'Gratis'
+                                      ? 'Gratis / Tanpa Tiket'
                                       : currencyFormatter.format(
                                           _selectedDestination!.estimatedPrice,
                                         ),
@@ -617,8 +1002,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         DestinationDetailScreen(
-                                          destination: _selectedDestination!,
-                                        ),
+                                      destination: _selectedDestination!,
+                                    ),
                                   ),
                                 );
                               },
@@ -669,6 +1054,347 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  void _showCompassInfoDialog() {
+    double? destBearing;
+    if (_selectedDestination != null && _userLocation != null) {
+      destBearing = SensorService.calculateBearing(
+        _userLocation!,
+        _selectedDestination!.coordinates,
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Material(
+              color: AppColors.getCardColor(context),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.explore_rounded,
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Kompas & Sensor Akselerometer',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Orientasi perangkat real-time di Bandung',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.getTextSecondary(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+
+                      // Large Compass Dial
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 130,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.getSurfaceColor(context),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                width: 2.5,
+                              ),
+                            ),
+                          ),
+                          // Dial markings
+                          const Positioned(
+                            top: 8,
+                            child: Text(
+                              'U',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.redAccent,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const Positioned(
+                            bottom: 8,
+                            child: Text(
+                              'S',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Positioned(
+                            right: 8,
+                            child: Text(
+                              'T',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Positioned(
+                            left: 8,
+                            child: Text(
+                              'B',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          // Rotating Needle
+                          Transform.rotate(
+                            angle: -_orientation.heading * (math.pi / 180),
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.navigation_rounded,
+                                  color: Colors.redAccent,
+                                  size: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Heading Degree Text
+                      Text(
+                        '${_orientation.heading.toInt()}° ${_orientation.cardinalLabel}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Accelerometer Metrics Cards (Pitch & Roll)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.getSurfaceColor(context),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.getBorderColor(context),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Kemiringan Pitch',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_orientation.pitch.toStringAsFixed(1)}°',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.getSurfaceColor(context),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.getBorderColor(context),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Kemiringan Roll',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          AppColors.getTextSecondary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_orientation.roll.toStringAsFixed(1)}°',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // If a destination is selected, display bearing guide
+                      if (_selectedDestination != null &&
+                          destBearing != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.near_me_rounded,
+                                color: AppColors.primary,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Arah ke ${_selectedDestination!.name}:',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${destBearing.toInt()}° (${SensorService.getCardinalDirection(destBearing).label}) dari posisi Anda',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.getTextSecondary(
+                                            context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 18),
+
+                      // Action Buttons: Follow Mode / Reset North
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                _mapController.rotate(0);
+                                setState(() => _isCompassFollowMode = false);
+                                Navigator.pop(ctx);
+                              },
+                              icon: const Icon(Icons.north_rounded, size: 16),
+                              label: const Text('Reset Utara'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _isCompassFollowMode =
+                                      !_isCompassFollowMode;
+                                });
+                                if (_isCompassFollowMode) {
+                                  _mapController.rotate(_orientation.heading);
+                                } else {
+                                  _mapController.rotate(0);
+                                }
+                                Navigator.pop(ctx);
+                              },
+                              icon: Icon(
+                                _isCompassFollowMode
+                                    ? Icons.check_circle_rounded
+                                    : Icons.sync_rounded,
+                                size: 16,
+                              ),
+                              label: Text(
+                                _isCompassFollowMode
+                                    ? 'Matikan Putar Peta'
+                                    : 'Putar Peta Otomatis',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

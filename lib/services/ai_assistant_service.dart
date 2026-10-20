@@ -14,25 +14,54 @@ class AiAssistantService {
   AiAssistantService._internal();
 
   static const String _keyGeminiApiKey = 'bandunghub_gemini_api_key';
+  static const String _defaultApiKey =
+      'AQ.Ab8RN6JTc2KF4spepIER1kdm9e5XCIjDGCFQq_V24t919zMV1g';
 
-  // Model name - using gemini-1.5-flash for rapid, lightweight travel responses
-  static const String _geminiModel = 'gemini-1.5-flash';
+  // Primary model and fallback models for Google Gemini
+  static const String _primaryModel = 'gemini-3.8-flash';
+  static const List<String> _candidateModels = [
+    'gemini-3.8-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-flash-lite',
+  ];
 
-  // System Prompt for Bandung Tourism Companion
+  // System Prompt strictly focused on BandungHub application, Bandung tourism, culture, and itinerary
   static const String _systemPrompt = '''
-Anda adalah 'Kang Bandung', asisten pemandu wisata cerdas, ramah, dan berpengalaman untuk aplikasi BandungHub.
-Tugas Anda:
-1. Memberikan rekomendasi destinasi wisata di Kota dan Kabupaten Bandung yang sesuai preferensi pengguna.
-2. Memberikan tips perjalanan realistis: waktu terbaik berkunjung, kondisi cuaca sejuk (misal: Lembang/Ciwidey), perkiraan biaya tiket, dan kuliner khas sekitar.
-3. Sebutkan nama-nama destinasi wisata Bandung secara jelas.
-4. Gunakan gaya bahasa Indonesia yang santun, hangat, dan ramah dengan sisipan salam khas Sunda seperti 'Sampurasun!', 'Wilujeng sumping', 'Hatur nuhun'.
-5. Bersikap ringkas, padat, dan terstruktur.
+Anda adalah 'Kang Bandung', asisten virtual dan pemandu wisata resmi aplikasi BandungHub.
+
+FOKUS DAN TUGAS UTAMA:
+1. Memberikan rekomendasi destinasi wisata di Kota Bandung, Kabupaten Bandung (Ciwidey, Pangalengan), Bandung Barat (Lembang), dan sekitarnya.
+2. Memberikan rekomendasi kuliner legendaris dan kuliner khas Sunda/Bandung (seblak, batagor, mie kocok, lotek, surabi, dll).
+3. Memberikan panduan budaya Sunda, sejarah Bandung (Gedung Sate, KAA, Jalan Braga), dan kebiasaan lokal ramah ("Someah Hade ka Semah").
+4. Memandu penggunaan fitur-fitur aplikasi BandungHub kepada pengguna:
+   - Fitur 'Beranda' (Home): Ringkasan destinasi populer, cuaca terkini di Bandung, dan akses cepat.
+   - Fitur 'Jelajah' (Explore): Mencari dan menyaring destinasi wisata berdasarkan kategori (Alam, Kuliner, Sejarah, Hiburan, Keluarga) dan batas budget tiket masuk.
+   - Fitur 'Peta' (Interactive Map): Melihat sebaran lokasi wisata di peta dan navigasi langsung ke lokasi via Google Maps.
+   - Fitur 'Rencana' (Itinerary): Menyusun jadwal perjalanan liburan per hari (Day 1, Day 2) lengkap dengan estimasi pengeluaran.
+   - Fitur 'Game' (Bocchi Jumpy Game 🎸): Mini-game arkade pixel melompat seru bersama karakter anime Bocchi (Hitori Gotoh), melintasi platform kayu, mengumpulkan nada musik & pick gitar, serta menghindari rintangan untuk meraih rekor skor tertinggi.
+   - Fitur 'Asisten AI Kang Bandung': Konsultasi langsung tanya-jawab seputar rencana liburan di Bandung.
+
+BATASAN KETAT (GUARDRAILS):
+- HANYA jawab pertanyaan yang relevan dengan pariwisata Bandung, kuliner Bandung, budaya Sunda/Jawa Barat, atau fitur dan fungsi aplikasi BandungHub.
+- JIKA pengguna bertanya tentang topik di luar hal tersebut (misalnya matematika umum, koding pemrograman di luar aplikasi ini, politik internasional, sains umum, resep non-lokal, gosip, dsb), TOLAK DENGAN SANTUN DAN RAMAH khas Sunda. Arahkan pengguna kembali untuk mengeksplorasi wisata Bandung atau merencanakan liburan di aplikasi BandungHub. Contoh penolakan: "Punten pisan wargi! Kang Bandung dikhususkan sebagai pemandu wisata Bandung dan aplikasi BandungHub. Kalau ada yang ingin ditanyakan seputar destinasi wisata, kuliner lezat, atau rencana jalan-jalan di Bandung, mangga atuh tanyakan ke Kang Bandung!"
+
+GAYA BAHASA:
+- Gunakan bahasa Indonesia yang santun, hangat, bersahabat, dengan sisipan salam dan kosakata khas Sunda seperti 'Sampurasun!', 'Wilujeng sumping', 'Punten', 'Hatur nuhun pisan', 'Mangga'.
+- Buat jawaban terstruktur rapi menggunakan poin (bullet points), teks tebal (bold), dan ringkas namun berbobot.
 ''';
 
   // API Key management
   Future<String?> getApiKey() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyGeminiApiKey);
+  }
+
+  Future<String> getEffectiveApiKey() async {
+    final customKey = await getApiKey();
+    if (customKey != null && customKey.trim().isNotEmpty) {
+      return customKey.trim();
+    }
+    return _defaultApiKey;
   }
 
   Future<void> saveApiKey(String apiKey) async {
@@ -63,10 +92,10 @@ Tugas Anda:
       );
     }
 
-    final apiKey = await getApiKey();
+    final apiKey = await getEffectiveApiKey();
 
-    // 1. Try Gemini API if API key is provided
-    if (apiKey != null && apiKey.isNotEmpty) {
+    // 1. Try Gemini API with the active key
+    if (apiKey.isNotEmpty) {
       try {
         final geminiResponse = await _queryGeminiApi(cleanPrompt, apiKey);
         if (geminiResponse != null && geminiResponse.isNotEmpty) {
@@ -92,47 +121,74 @@ Tugas Anda:
     return _generateLocalHeuristicResponse(cleanPrompt);
   }
 
-  // Query Gemini REST endpoint
+  // Query Gemini REST endpoint with model fallback
   Future<String?> _queryGeminiApi(String prompt, String apiKey) async {
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/$_geminiModel:generateContent?key=$apiKey',
-    );
+    final modelsToTry = [
+      _primaryModel,
+      ..._candidateModels.where((m) => m != _primaryModel),
+    ];
 
-    final payload = {
-      'contents': [
-        {
-          'role': 'user',
-          'parts': [
-            {'text': '$_systemPrompt\n\nPertanyaan Pengguna: $prompt'},
+    for (final model in modelsToTry) {
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+        );
+
+        final payload = {
+          'system_instruction': {
+            'parts': [
+              {'text': _systemPrompt},
+            ],
+          },
+          'contents': [
+            {
+              'role': 'user',
+              'parts': [
+                {'text': prompt},
+              ],
+            },
           ],
-        },
-      ],
-      'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 800},
-    };
+          'generationConfig': {
+            'temperature': 0.7,
+            'maxOutputTokens': 1000,
+          },
+        };
 
-    final response = await http
-        .post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(payload),
-        )
-        .timeout(const Duration(seconds: 12));
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 15));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final candidates = data['candidates'] as List<dynamic>?;
-      if (candidates != null && candidates.isNotEmpty) {
-        final content = candidates[0]['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List<dynamic>?;
-        if (parts != null && parts.isNotEmpty) {
-          return parts[0]['text'] as String?;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final candidates = data['candidates'] as List<dynamic>?;
+          if (candidates != null && candidates.isNotEmpty) {
+            final content = candidates[0]['content'] as Map<String, dynamic>?;
+            final parts = content?['parts'] as List<dynamic>?;
+            if (parts != null && parts.isNotEmpty) {
+              final text = parts[0]['text'] as String?;
+              if (text != null && text.trim().isNotEmpty) {
+                return text.trim();
+              }
+            }
+          }
+        } else {
+          debugPrint(
+            'Gemini API ($model) failed with status ${response.statusCode}: ${response.body}',
+          );
+          // If 404 or model not found, loop to next candidate model
+          if (response.statusCode == 404) {
+            continue;
+          }
         }
+      } catch (e) {
+        debugPrint('Gemini API call to $model encountered error: $e');
       }
-    } else {
-      debugPrint(
-        'Gemini API error code: ${response.statusCode}, body: ${response.body}',
-      );
     }
+
     return null;
   }
 

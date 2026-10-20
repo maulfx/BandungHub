@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../data/repositories/quiz_repository.dart';
-import '../../../models/quiz_question.dart';
+import '../../../services/sensor_service.dart';
+import '../controllers/jumpy_game_controller.dart';
+import '../models/jumpy_game_models.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -11,907 +16,493 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
-  final _quizRepo = QuizRepository();
+class _GameScreenState extends State<GameScreen>
+    with SingleTickerProviderStateMixin {
+  final _controller = JumpyGameController();
+  final _sensorService = SensorService();
+  StreamSubscription<double>? _tiltSub;
+  bool _isGyroEnabled = true;
+
+  late final Ticker _ticker;
+  Duration _lastElapsed = Duration.zero;
+
+  // Cached Pixel Art Assets from Bocchi-Jumpy-Game
+  ui.Image? _bocchiImage;
+  ui.Image? _woodImage;
+  ui.Image? _bgImage;
+  ui.Image? _birdImage;
+  ui.Image? _ghostImage;
+  bool _assetsLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _quizRepo.init();
+    _controller.init();
+    _ticker = createTicker(_onTick);
+    _loadPixelAssets();
+
+    // Listen to device motion/gyroscope for tilt-based steering
+    _sensorService.startListening();
+    _tiltSub = _sensorService.gameTiltStream.listen((tilt) {
+      if (_isGyroEnabled &&
+          _controller.isPlaying &&
+          !_controller.isPaused &&
+          !_controller.isGameOver) {
+        _controller.setHorizontalMovement(tilt);
+      }
+    });
+  }
+
+  Future<void> _loadPixelAssets() async {
+    try {
+      _bocchiImage = await _loadUiImage('assets/mini_game/bocchi.png');
+      _woodImage = await _loadUiImage('assets/mini_game/wood.png');
+      _bgImage = await _loadUiImage('assets/mini_game/background.png');
+      _birdImage = await _loadUiImage('assets/mini_game/bird.png');
+      _ghostImage = await _loadUiImage('assets/mini_game/ghost.png');
+    } catch (_) {
+      // Fallbacks will be used seamlessly
+    }
+    if (mounted) {
+      setState(() {
+        _assetsLoaded = true;
+      });
+    }
+  }
+
+  Future<ui.Image?> _loadUiImage(String assetPath) async {
+    try {
+      final byteData = await rootBundle.load(assetPath);
+      final codec =
+          await ui.instantiateImageCodec(byteData.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      return frame.image;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _onTick(Duration elapsed) {
+    if (_lastElapsed == Duration.zero) {
+      _lastElapsed = elapsed;
+      return;
+    }
+    final dt = (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
+    _lastElapsed = elapsed;
+
+    if (_controller.isPlaying &&
+        !_controller.isPaused &&
+        !_controller.isGameOver) {
+      _controller.updatePhysics(dt.clamp(0.001, 0.05));
+    }
+  }
+
+  @override
+  void dispose() {
+    _tiltSub?.cancel();
+    _sensorService.stopListening();
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  void _startGame(Size size) {
+    _controller.startNewGame(
+      screenWidth: size.width,
+      screenHeight: size.height,
+    );
+    _lastElapsed = Duration.zero;
+    if (!_ticker.isActive) {
+      _ticker.start();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _quizRepo,
+      listenable: _controller,
       builder: (context, _) {
         return Scaffold(
+          backgroundColor: const Color(0xFF16152B), // Retro Anime Night Slate
           appBar: AppBar(
-            title: const Text('Kuis Jelajah Bandung'),
+            backgroundColor: const Color(0xFF201E3D),
+            elevation: 0,
+            title: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'BOCCHI JUMPY 🎸',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    fontSize: 18,
+                    color: Color(0xFFFF7EB3), // Bocchi Pink
+                  ),
+                ),
+              ],
+            ),
             actions: [
-              if (_quizRepo.isPlaying)
-                TextButton.icon(
+              // Gyro Tilt Toggle Button
+              IconButton(
+                icon: Icon(
+                  _isGyroEnabled
+                      ? Icons.screen_rotation_rounded
+                      : Icons.screen_lock_rotation_rounded,
+                  color: _isGyroEnabled
+                      ? const Color(0xFFFF7EB3)
+                      : Colors.white54,
+                ),
+                tooltip: _isGyroEnabled
+                    ? 'Gyro Aktif (Miringkan HP)'
+                    : 'Gyro Nonaktif (Gunakan Tombol)',
+                onPressed: () {
+                  setState(() => _isGyroEnabled = !_isGyroEnabled);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _isGyroEnabled
+                            ? 'Gyroscope Aktif: Miringkan HP ke kiri/kanan untuk bergerak!'
+                            : 'Gyroscope Nonaktif: Gunakan tombol panah di layar.',
+                      ),
+                      duration: const Duration(seconds: 1),
+                      backgroundColor: _isGyroEnabled
+                          ? const Color(0xFF2D225A)
+                          : Colors.grey.shade800,
+                    ),
+                  );
+                },
+              ),
+              if (_controller.isPlaying)
+                IconButton(
+                  icon: Icon(
+                    _controller.isPaused
+                        ? Icons.play_arrow_rounded
+                        : Icons.pause_rounded,
+                    color: const Color(0xFFFFD54F),
+                  ),
+                  tooltip: _controller.isPaused ? 'Lanjutkan' : 'Jeda',
+                  onPressed: _controller.togglePause,
+                ),
+              if (_controller.isPlaying)
+                IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      color: Color(0xFFFF5252)),
+                  tooltip: 'Keluar',
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (dialogContext) {
-                        return AlertDialog(
-                          title: const Text('Akhiri Kuis?'),
-                          content: const Text(
-                            'Progres kuis saat ini tidak akan disimpan.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogContext),
-                              child: const Text('Lanjutkan Kuis'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.error,
-                              ),
-                              onPressed: () {
-                                Navigator.pop(dialogContext);
-                                _quizRepo.resetToLobby();
-                              },
-                              child: const Text(
-                                'Akhiri',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
+                    _controller.resetToLobby();
                   },
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: AppColors.error,
-                  ),
-                  label: const Text(
-                    'Keluar',
-                    style: TextStyle(color: AppColors.error),
-                  ),
                 ),
             ],
           ),
-          body: SafeArea(child: _buildCurrentStateView()),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final size = Size(constraints.maxWidth, constraints.maxHeight);
+
+              if (_controller.isGameOver) {
+                return _buildGameOverView(size);
+              } else if (_controller.isPlaying) {
+                return _buildGamePlayView(size);
+              } else {
+                return _buildLobbyView(size);
+              }
+            },
+          ),
         );
       },
     );
   }
 
-  Widget _buildCurrentStateView() {
-    if (_quizRepo.isGameOver || _quizRepo.isQuizFinished) {
-      return _buildResultView();
-    } else if (_quizRepo.isPlaying) {
-      return _buildQuizPlayView();
-    } else {
-      return _buildLobbyView();
-    }
-  }
-
-  // 1. Lobby View
-  Widget _buildLobbyView() {
+  // ===========================================================================
+  // 1. LOBBY VIEW (Anime Pixel Theme)
+  // ===========================================================================
+  Widget _buildLobbyView(Size size) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Banner Icon
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.sports_esports_rounded,
-                size: 54,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          const Text(
-            'Kuis Wisata & Budaya Bandung',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryDark,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Uji wawasan Anda seputar ikon wisata, kuliner legendaris, sejarah kemerdekaan, dan budaya khas Parijs van Java!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: AppColors.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // High Score Card
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.emoji_events_rounded,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Skor Tertinggi',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_quizRepo.highScore} pts',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(width: 1, height: 40, color: AppColors.borderLight),
-                Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.history_toggle_off_rounded,
-                          color: AppColors.secondary,
-                          size: 20,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Total Main',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${_quizRepo.gamesPlayed} Kali',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimaryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Game Rules Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.15),
-              ),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.lightbulb_outline_rounded,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Aturan Permainan:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                Text(
-                  '• 8 pertanyaan pilihan ganda acak dari bank soal wisata Bandung.',
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '• Waktu 15 detik per soal. Semakin cepat menjawab, semakin besar bonus poin!',
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '• Anda memiliki 3 nyawa (kesempatan). Jawaban salah atau waktu habis mengurangi 1 nyawa.',
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '• Pertahankan streak jawaban benar untuk bonus multiplier beruntun.',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Start Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _quizRepo.startNewGame(totalQuestions: 8),
-              icon: const Icon(Icons.play_arrow_rounded, size: 24),
-              label: const Text(
-                'Mulai Kuis Sekarang',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  // 2. Play View
-  Widget _buildQuizPlayView() {
-    final question = _quizRepo.currentQuestion;
-    if (question == null) return const SizedBox.shrink();
-
-    final timerFraction = _quizRepo.remainingSeconds / 15.0;
-
-    Color timerColor = AppColors.success;
-    if (_quizRepo.remainingSeconds <= 5) {
-      timerColor = AppColors.error;
-    } else if (_quizRepo.remainingSeconds <= 9) {
-      timerColor = Colors.amber;
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top Status Bar (Question index, Lives, Score & Streak)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Question Progress
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Soal ${_quizRepo.currentIndex + 1} / ${_quizRepo.questions.length}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-
-              // Lives (Hearts)
-              Row(
-                children: List.generate(3, (index) {
-                  final isAlive = index < _quizRepo.lives;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Icon(
-                      isAlive
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: isAlive ? Colors.redAccent : Colors.grey.shade400,
-                      size: 22,
-                    ),
-                  );
-                }),
-              ),
-
-              // Score with Streak Badge
-              Row(
-                children: [
-                  if (_quizRepo.streak > 1)
-                    Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'x${_quizRepo.streak} 🔥',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  Text(
-                    '${_quizRepo.score} pts',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryDark,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Timer Bar
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Waktu Berpikir:',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  Text(
-                    '${_quizRepo.remainingSeconds}s',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: timerColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: timerFraction,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(timerColor),
-                  minHeight: 6,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Question Card
+          // Anime Banner Card with Pixel Aesthetic
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2D225A), Color(0xFF181534)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFFF7EB3).withValues(alpha: 0.6),
+                width: 2.5,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: const Color(0xFFFF7EB3).withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        question.category,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.secondary,
-                        ),
-                      ),
+                // Anime Character Avatar (Bocchi)
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE0EB),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xFFFF7EB3),
+                      width: 3,
                     ),
-                    if (question.hint.isNotEmpty &&
-                        !_quizRepo.hintUsed &&
-                        !_quizRepo.isAnswerSubmitted)
-                      TextButton.icon(
-                        onPressed: _quizRepo.useHint,
-                        icon: const Icon(Icons.help_outline_rounded, size: 14),
-                        label: const Text(
-                          'Bantuan',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  question.question,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    height: 1.4,
-                    color: AppColors.textPrimaryLight,
-                  ),
-                ),
-                if (_quizRepo.hintUsed) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.lightbulb_rounded,
-                          size: 16,
-                          color: Colors.amber,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Petunjuk: ${question.hint}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.brown.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 4 Options
-          ...List.generate(question.options.length, (index) {
-            final option = question.options[index];
-            return _buildOptionButton(
-              optionText: option,
-              optionIndex: index,
-              question: question,
-            );
-          }),
-
-          // Educational Explanation Card (Appears after answer submission)
-          if (_quizRepo.isAnswerSubmitted) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _quizRepo.selectedAnswerIndex == question.correctIndex
-                            ? Icons.check_circle_rounded
-                            : Icons.info_rounded,
-                        color:
-                            _quizRepo.selectedAnswerIndex ==
-                                question.correctIndex
-                            ? AppColors.success
-                            : AppColors.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _quizRepo.selectedAnswerIndex == question.correctIndex
-                            ? 'Jawaban Benar! 🎉'
-                            : 'Fakta Menarik & Edukasi:',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    question.explanation,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 1.4,
-                      color: AppColors.textPrimaryLight,
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.asset(
+                    'assets/mini_game/bocchi.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Text('🎸', style: TextStyle(fontSize: 48)),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Next Question Button
-            ElevatedButton(
-              onPressed: () => _quizRepo.nextQuestion(),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-              child: Text(
-                _quizRepo.currentIndex + 1 < _quizRepo.questions.length &&
-                        !_quizRepo.isGameOver
-                    ? 'Lanjut ke Soal Berikutnya'
-                    : 'Lihat Hasil Akhir',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ],
-      ),
-    );
-  }
+                const SizedBox(height: 14),
 
-  Widget _buildOptionButton({
-    required String optionText,
-    required int optionIndex,
-    required QuizQuestion question,
-  }) {
-    Color cardColor = Colors.white;
-    Color textColor = AppColors.textPrimaryLight;
-    BorderSide borderSide = const BorderSide(color: AppColors.borderLight);
-    Widget? trailingIcon;
-
-    if (_quizRepo.isAnswerSubmitted) {
-      if (optionIndex == question.correctIndex) {
-        // Correct answer highlighted green
-        cardColor = AppColors.success.withValues(alpha: 0.12);
-        textColor = AppColors.success;
-        borderSide = const BorderSide(color: AppColors.success, width: 2);
-        trailingIcon = const Icon(
-          Icons.check_circle_rounded,
-          color: AppColors.success,
-          size: 20,
-        );
-      } else if (optionIndex == _quizRepo.selectedAnswerIndex) {
-        // Chosen wrong answer highlighted red
-        cardColor = AppColors.error.withValues(alpha: 0.12);
-        textColor = AppColors.error;
-        borderSide = const BorderSide(color: AppColors.error, width: 2);
-        trailingIcon = const Icon(
-          Icons.cancel_rounded,
-          color: AppColors.error,
-          size: 20,
-        );
-      } else {
-        // Faded options
-        textColor = Colors.grey.shade400;
-      }
-    }
-
-    final optionLabels = ['A', 'B', 'C', 'D'];
-    final label = optionIndex < 4 ? optionLabels[optionIndex] : '$optionIndex';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: _quizRepo.isAnswerSubmitted
-            ? null
-            : () => _quizRepo.submitAnswer(optionIndex),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.fromBorderSide(borderSide),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: AppColors.primary,
+                // Pixel Edition Tag
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF00E5FF),
+                      width: 1.5,
+                    ),
                   ),
+                  child: const Text(
+                    '★ BOCCHI THE ROCK! PIXEL GAME ★',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF00E5FF),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Bocchi Jumpy!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Mainkan karakter Bocchi (Hitori Gotoh)! Lompat di atas platform kayu, hindari rintangan burung & hantu kecemasan, dan raih skor tertinggi!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFFB0B3C7),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // High Score & Stats
+          Row(
+            children: [
+              Expanded(
+                child: _buildPixelStatCard(
+                  icon: Icons.emoji_events_rounded,
+                  iconColor: const Color(0xFFFFD54F),
+                  title: 'Skor Tertinggi',
+                  value: '${_controller.highScore} pts',
+                  borderColor: const Color(0xFFFFD54F),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  optionText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
+                child: _buildPixelStatCard(
+                  icon: Icons.sports_esports_rounded,
+                  iconColor: const Color(0xFFFF7EB3),
+                  title: 'Total Main',
+                  value: '${_controller.gamesPlayed} Kali',
+                  borderColor: const Color(0xFFFF7EB3),
                 ),
               ),
-              ?trailingIcon,
             ],
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 18),
 
-  // 3. Result View (Game Over / Finished)
-  Widget _buildResultView() {
-    final isWin = !_quizRepo.isGameOver && _quizRepo.isQuizFinished;
-    final badgeTitle = _quizRepo.getBadgeTitle();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: (isWin ? Colors.amber : Colors.redAccent).withValues(
-                  alpha: 0.15,
+          // How to Play & Items Guide (Anime Pixel Theme)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF201E3D),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Text('🎮', style: TextStyle(fontSize: 18)),
+                    SizedBox(width: 8),
+                    Text(
+                      'PANDUAN LOMPAT PIXEL',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFFFD54F),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
                 ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isWin ? Icons.emoji_events_rounded : Icons.heart_broken_rounded,
-                size: 64,
-                color: isWin ? Colors.amber : Colors.redAccent,
-              ),
+                const SizedBox(height: 12),
+                _buildGuideItem(
+                  '🪵',
+                  'Platform Kayu',
+                  'Lompat ke kayu untuk memantul ke atas.',
+                ),
+                const SizedBox(height: 8),
+                _buildGuideItem(
+                  '⚡',
+                  'Amplifier Spring',
+                  'Pantulan super tinggi melesat ke langit!',
+                ),
+                const SizedBox(height: 8),
+                _buildGuideItem(
+                  '🕊️',
+                  'Burung & Ghost',
+                  'Musuh terbang anime, hindari agar tidak Game Over!',
+                ),
+                const SizedBox(height: 8),
+                _buildGuideItem(
+                  '🎸',
+                  'Pick Gitar & Nada 🎵',
+                  'Koleksi item musik Bocchi untuk bonus skor ekstra!',
+                ),
+                const SizedBox(height: 8),
+                _buildGuideItem(
+                  '🔄',
+                  'Screen Wrap',
+                  'Keluar lewat sisi kiri akan muncul di sisi kanan!',
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),
 
-          Text(
-            isWin ? 'Selamat! Kuis Selesai! 🎉' : 'Nyawa Habis! Game Over 💔',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            isWin
-                ? 'Anda telah menyelesaikan seluruh pertanyaan kuis Bandung.'
-                : 'Jangan berkecil hati, ayo coba lagi untuk meningkatkan skor wawasan Anda!',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Earned Badge Box
+          // Gyroscope / Tilt Mode Switch Card
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.1),
-                  AppColors.secondary.withValues(alpha: 0.1),
-                ],
-              ),
+              color: const Color(0xFF201E3D),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.2),
+                color: _isGyroEnabled
+                    ? const Color(0xFFFF7EB3)
+                    : Colors.white24,
+                width: 1.5,
               ),
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'Gelar Wisatawan:',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondaryLight,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  badgeTitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryDark,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Score and Accuracy Metrics
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderLight),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Column(
-                  children: [
-                    const Text(
-                      'Skor Akhir',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_quizRepo.score}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
+                Icon(
+                  Icons.screen_rotation_rounded,
+                  color: _isGyroEnabled
+                      ? const Color(0xFFFF7EB3)
+                      : Colors.grey,
+                  size: 26,
                 ),
-                Container(width: 1, height: 36, color: AppColors.borderLight),
-                Column(
-                  children: [
-                    const Text(
-                      'Benar',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondaryLight,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sensor Gyroscope (Tilt HP)',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_quizRepo.correctCount} / ${_quizRepo.questions.length}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.success,
+                      Text(
+                        _isGyroEnabled
+                            ? 'Miringkan HP ke kiri/kanan untuk mengarahkan Bocchi'
+                            : 'Sensor dinonaktifkan (Gunakan tombol sentuh panah)',
+                        style: const TextStyle(
+                          color: Color(0xFFB0B3C7),
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Container(width: 1, height: 36, color: AppColors.borderLight),
-                Column(
-                  children: [
-                    const Text(
-                      'Rekor Terbaik',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_quizRepo.highScore}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber,
-                      ),
-                    ),
-                  ],
+                Switch(
+                  value: _isGyroEnabled,
+                  activeColor: const Color(0xFFFF7EB3),
+                  onChanged: (val) {
+                    setState(() => _isGyroEnabled = val);
+                  },
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 18),
 
-          // Action Buttons
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _quizRepo.startNewGame(totalQuestions: 8),
-              icon: const Icon(Icons.replay_rounded),
-              label: const Text(
-                'Main Lagi (Kuis Baru)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Big Start Button (Retro Arcade Style)
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7EB3),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(
+                  color: Colors.white,
+                  width: 2,
                 ),
               ),
+              elevation: 8,
+              shadowColor: const Color(0xFFFF7EB3).withValues(alpha: 0.6),
             ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _quizRepo.resetToLobby,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            onPressed: () => _startGame(size),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.play_arrow_rounded, size: 28),
+                SizedBox(width: 8),
+                Text(
+                  'Mulai Lompat!',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              child: const Text('Kembali ke Menu Kuis'),
+              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -919,4 +510,844 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
   }
+
+  Widget _buildPixelStatCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    required Color borderColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF201E3D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: borderColor.withValues(alpha: 0.6),
+          width: 1.8,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB0B3C7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: iconColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuideItem(String icon, String title, String desc) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(icon, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                desc,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFFB0B3C7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===========================================================================
+  // 2. ACTIVE GAMEPLAY VIEW (Pixel Canvas + Touch Controls)
+  // ===========================================================================
+  Widget _buildGamePlayView(Size size) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (details) {
+        final delta = details.primaryDelta ?? 0;
+        _controller.setHorizontalMovement(delta * 0.25);
+      },
+      onHorizontalDragEnd: (_) {
+        _controller.stopMoving();
+      },
+      child: Stack(
+        children: [
+          // The Custom Canvas Painter
+          Positioned.fill(
+            child: CustomPaint(
+              size: size,
+              painter: _BocchiGamePainter(
+                player: _controller.player,
+                platforms: _controller.platforms,
+                enemies: _controller.enemies,
+                highScore: _controller.highScore,
+                currentScore: _controller.score,
+                bgScroll: _controller.bgScroll,
+                bocchiImage: _bocchiImage,
+                woodImage: _woodImage,
+                bgImage: _bgImage,
+                birdImage: _birdImage,
+                ghostImage: _ghostImage,
+              ),
+            ),
+          ),
+
+          // Top Retro HUD (Score & High Score)
+          Positioned(
+            top: 14,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Score Box
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFFF7EB3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🎸', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'SCORE: ${_controller.score}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Gyro Indicator Pill
+                if (_isGyroEnabled)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2D225A).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFFF7EB3),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.screen_rotation_rounded,
+                          color: Color(0xFFFF7EB3),
+                          size: 13,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'GYRO TILT',
+                          style: TextStyle(
+                            color: Color(0xFFFF7EB3),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // High Score Box
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFFFD54F),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.emoji_events_rounded,
+                          color: Color(0xFFFFD54F), size: 15),
+                      const SizedBox(width: 4),
+                      Text(
+                        'HI: ${_controller.highScore}',
+                        style: const TextStyle(
+                          color: Color(0xFFFFD54F),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // On-screen Touch Controls (Bottom Left & Right)
+          Positioned(
+            bottom: 22,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Left Button
+                Listener(
+                  onPointerDown: (_) => _controller.moveLeft(),
+                  onPointerUp: (_) => _controller.stopMoving(),
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF201E3D).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFFFF7EB3),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF7EB3).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+
+                // Right Button
+                Listener(
+                  onPointerDown: (_) => _controller.moveRight(),
+                  onPointerUp: (_) => _controller.stopMoving(),
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF201E3D).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFFFF7EB3),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF7EB3).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 3. GAME OVER VIEW (Retro Arcade Style)
+  // ===========================================================================
+  Widget _buildGameOverView(Size size) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.all(26),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1A38),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: const Color(0xFFFF5252),
+            width: 2.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF5252).withValues(alpha: 0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Defeated anime chibi Bocchi icon
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFCDD2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFF5252), width: 2),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/mini_game/bocchi.png',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.none,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Text('😵', style: TextStyle(fontSize: 42)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            const Text(
+              '★ GAME OVER! ★',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFFF5252),
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            if (_controller.isNewRecord)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star_rounded, color: Color(0xFFFFD54F), size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      'NEW HIGH SCORE! 🏆',
+                      style: TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const Text(
+              'SKOR AKHIR',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFB0B3C7),
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${_controller.score} pts',
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFFF7EB3),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Rekor Terbaik: ${_controller.highScore} pts',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFFB0B3C7),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Play Again
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF7EB3),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Colors.white, width: 1.5),
+                ),
+              ),
+              onPressed: () => _startGame(size),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.replay_rounded),
+                  SizedBox(width: 8),
+                  Text(
+                    'Main Lagi 🎸',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Back to Menu
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                minimumSize: const Size.fromHeight(46),
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: _controller.resetToLobby,
+              child: const Text(
+                'Kembali ke Menu',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// GAME CANVAS PAINTER (Anime Pixel Art: Bocchi, Wood Platforms, Enemies, Notes)
+// =============================================================================
+class _BocchiGamePainter extends CustomPainter {
+  final JumperPlayer player;
+  final List<GamePlatform> platforms;
+  final List<GameEnemy> enemies;
+  final int highScore;
+  final int currentScore;
+  final double bgScroll;
+
+  final ui.Image? bocchiImage;
+  final ui.Image? woodImage;
+  final ui.Image? bgImage;
+  final ui.Image? birdImage;
+  final ui.Image? ghostImage;
+
+  _BocchiGamePainter({
+    required this.player,
+    required this.platforms,
+    required this.enemies,
+    required this.highScore,
+    required this.currentScore,
+    required this.bgScroll,
+    this.bocchiImage,
+    this.woodImage,
+    this.bgImage,
+    this.birdImage,
+    this.ghostImage,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw Background (Parallax Scrolling Pixel Anime Background or Gradient)
+    if (bgImage != null) {
+      final src = Rect.fromLTWH(
+        0,
+        0,
+        bgImage!.width.toDouble(),
+        bgImage!.height.toDouble(),
+      );
+      final offset = bgScroll % size.height;
+
+      // Draw two vertical slices to loop seamlessly
+      canvas.drawImageRect(
+        bgImage!,
+        src,
+        Rect.fromLTWH(0, offset, size.width, size.height),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      canvas.drawImageRect(
+        bgImage!,
+        src,
+        Rect.fromLTWH(0, offset - size.height, size.width, size.height),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+    } else {
+      // Anime Sky Gradient Fallback
+      final bgRect = Rect.fromLTWH(0, 0, size.width, size.height);
+      final bgPaint = Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF2C3E50),
+            Color(0xFF4CA1AF),
+            Color(0xFFC4E0E5),
+          ],
+        ).createShader(bgRect);
+      canvas.drawRect(bgRect, bgPaint);
+    }
+
+    // 2. High Score Line Indicator (Just like Bocchi Jumpy Game)
+    if (highScore > 0) {
+      final scrollThreshold = size.height * 0.44;
+      final lineY = currentScore - highScore + scrollThreshold;
+      if (lineY >= 0 && lineY <= size.height) {
+        final linePaint = Paint()
+          ..color = const Color(0xFFFFD54F)
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(
+          Offset(0, lineY),
+          Offset(size.width, lineY),
+          linePaint,
+        );
+
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: '★ HIGH SCORE: $highScore ★',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFFFD54F),
+              backgroundColor: Colors.black87,
+              letterSpacing: 1,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(size.width - textPainter.width - 12, lineY - 14),
+        );
+      }
+    }
+
+    // 3. Draw Platforms (Pixel Wood Texture from GitHub repo)
+    for (final p in platforms) {
+      if (p.isBroken) continue;
+
+      if (woodImage != null) {
+        final src = Rect.fromLTWH(
+          0,
+          0,
+          woodImage!.width.toDouble(),
+          woodImage!.height.toDouble(),
+        );
+        final dst = Rect.fromLTWH(p.x, p.y, p.width, p.height);
+
+        // Platform color tint for special types
+        final paint = Paint()..filterQuality = FilterQuality.none;
+        if (p.type == PlatformType.spring) {
+          paint.colorFilter = const ColorFilter.mode(
+            Color(0xFFFFD54F),
+            BlendMode.modulate,
+          );
+        } else if (p.type == PlatformType.moving) {
+          paint.colorFilter = const ColorFilter.mode(
+            Color(0xFF80D8FF),
+            BlendMode.modulate,
+          );
+        } else if (p.type == PlatformType.fragile) {
+          paint.colorFilter = const ColorFilter.mode(
+            Color(0xFFFF8A80),
+            BlendMode.modulate,
+          );
+        }
+
+        canvas.drawImageRect(woodImage!, src, dst, paint);
+      } else {
+        // Fallback wooden pixel platform
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(p.x, p.y, p.width, p.height),
+          const Radius.circular(5),
+        );
+
+        Color pColor = const Color(0xFF8D6E63);
+        if (p.type == PlatformType.moving) pColor = const Color(0xFF29B6F6);
+        if (p.type == PlatformType.spring) pColor = const Color(0xFFFFB300);
+        if (p.type == PlatformType.fragile) pColor = const Color(0xFFD7CCC8);
+
+        canvas.drawRRect(rect, Paint()..color = pColor);
+      }
+
+      // Spring Amplifier Icon for Spring Platform
+      if (p.type == PlatformType.spring) {
+        final textPainter = TextPainter(
+          text: const TextSpan(
+            text: '⚡',
+            style: TextStyle(fontSize: 13),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(p.x + p.width / 2 - 6, p.y - 12),
+        );
+      }
+
+      // Moving Platform Indicator
+      if (p.type == PlatformType.moving) {
+        final textPainter = TextPainter(
+          text: const TextSpan(
+            text: '◀▶',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(p.x + p.width / 2 - 8, p.y + 1),
+        );
+      }
+
+      // Draw Collectibles (Bocchi Theme: Notes, Guitar Pick, Stars, Drinks)
+      if (p.collectible != null) {
+        String emoji = '⭐';
+        switch (p.collectible!) {
+          case CollectibleType.musicNote:
+            emoji = '🎵';
+            break;
+          case CollectibleType.guitarPick:
+            emoji = '🎸';
+            break;
+          case CollectibleType.drink:
+            emoji = '🧃';
+            break;
+          case CollectibleType.star:
+            emoji = '⭐';
+            break;
+          case CollectibleType.batagor:
+            emoji = '🥟';
+            break;
+          case CollectibleType.coffee:
+            emoji = '☕';
+            break;
+        }
+
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: emoji,
+            style: const TextStyle(fontSize: 16),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(p.x + p.width / 2 - 8, p.y - 20),
+        );
+      }
+    }
+
+    // 4. Draw Flying Enemies (Bird / Ghost from GitHub repository)
+    for (final enemy in enemies) {
+      if (enemy.type == EnemyType.bird && birdImage != null) {
+        // Bird Spritesheet: 32x32 frames
+        final frame = enemy.animFrame % 8;
+        final src = Rect.fromLTWH(frame * 32.0, 0, 32, 32);
+        final dst = Rect.fromLTWH(
+          -enemy.width / 2,
+          -enemy.height / 2,
+          enemy.width,
+          enemy.height,
+        );
+
+        canvas.save();
+        canvas.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+        if (enemy.direction == 1) {
+          canvas.scale(-1.0, 1.0); // Facing right
+        }
+        canvas.drawImageRect(
+          birdImage!,
+          src,
+          dst,
+          Paint()..filterQuality = FilterQuality.none,
+        );
+        canvas.restore();
+      } else if (enemy.type == EnemyType.ghost && ghostImage != null) {
+        final src = Rect.fromLTWH(
+          0,
+          0,
+          ghostImage!.width.toDouble(),
+          ghostImage!.height.toDouble(),
+        );
+        final dst = Rect.fromLTWH(
+          enemy.x,
+          enemy.y,
+          enemy.width,
+          enemy.height,
+        );
+        canvas.drawImageRect(
+          ghostImage!,
+          src,
+          dst,
+          Paint()..filterQuality = FilterQuality.none,
+        );
+      } else {
+        // Fallback Enemy Emoji
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: enemy.type == EnemyType.bird ? '🕊️' : '👻',
+            style: const TextStyle(fontSize: 22),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(enemy.x, enemy.y));
+      }
+    }
+
+    // 5. Draw Bocchi Character (Pixel Sprite with Horizontal Flip)
+    if (bocchiImage != null) {
+      final src = Rect.fromLTWH(
+        0,
+        0,
+        bocchiImage!.width.toDouble(),
+        bocchiImage!.height.toDouble(),
+      );
+
+      canvas.save();
+      canvas.translate(player.x + player.width / 2, player.y + player.height / 2);
+
+      // Flip horizontally if facing left
+      if (!player.facingRight) {
+        canvas.scale(-1.0, 1.0);
+      }
+
+      // Squash and stretch bounce animation
+      double scaleY = 1.0;
+      double scaleX = 1.0;
+      if (player.velY < -5) {
+        scaleY = 1.15; // Stretched upward on jump
+        scaleX = 0.88;
+      } else if (player.velY > 5) {
+        scaleY = 0.92;
+        scaleX = 1.08;
+      }
+      canvas.scale(scaleX, scaleY);
+
+      final dst = Rect.fromLTWH(
+        -player.width / 2,
+        -player.height / 2,
+        player.width,
+        player.height,
+      );
+
+      canvas.drawImageRect(
+        bocchiImage!,
+        src,
+        dst,
+        Paint()..filterQuality = FilterQuality.none,
+      );
+
+      canvas.restore();
+    } else {
+      // Fallback Adorable Anime Bocchi Chibi Vector
+      _drawBocchiVectorFallback(canvas, player);
+    }
+  }
+
+  void _drawBocchiVectorFallback(Canvas canvas, JumperPlayer player) {
+    final centerX = player.x + player.width / 2;
+    final centerY = player.y + player.height / 2;
+
+    // Pink Tracksuit Body
+    final bodyPaint = Paint()..color = const Color(0xFFFF6B97);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+            player.x + 6, player.y + 16, player.width - 12, player.height - 18),
+        const Radius.circular(8),
+      ),
+      bodyPaint,
+    );
+
+    // Pink Anime Hair & Head
+    final headPaint = Paint()..color = const Color(0xFFFF85A2);
+    canvas.drawCircle(Offset(centerX, player.y + 14), 14, headPaint);
+
+    // Signature Blue & Yellow Hair Cubes of Bocchi
+    final blueCube = Paint()..color = const Color(0xFF00E5FF);
+    final yellowCube = Paint()..color = const Color(0xFFFFD54F);
+    final cubeX = player.facingRight ? player.x + 2 : player.x + player.width - 10;
+    canvas.drawRect(Rect.fromLTWH(cubeX, player.y + 2, 7, 7), blueCube);
+    canvas.drawRect(Rect.fromLTWH(cubeX + 5, player.y + 6, 7, 7), yellowCube);
+
+    // Anime Eyes
+    final eyePaint = Paint()..color = const Color(0xFF1A1C29);
+    final eyeX = player.facingRight ? centerX + 3 : centerX - 6;
+    canvas.drawCircle(Offset(eyeX, player.y + 14), 2.5, eyePaint);
+    canvas.drawCircle(Offset(eyeX + (player.facingRight ? 6 : -6), player.y + 14), 2.5, eyePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BocchiGamePainter oldDelegate) => true;
 }

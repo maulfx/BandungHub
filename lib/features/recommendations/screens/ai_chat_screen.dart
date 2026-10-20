@@ -57,9 +57,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   Future<void> _checkApiKeyStatus() async {
-    final hasKey = await _aiService.hasApiKey();
+    final effectiveKey = await _aiService.getEffectiveApiKey();
     if (mounted) {
-      setState(() => _hasGeminiKey = hasKey);
+      setState(() => _hasGeminiKey = effectiveKey.isNotEmpty);
     }
   }
 
