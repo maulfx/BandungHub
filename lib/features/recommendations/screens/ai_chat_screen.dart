@@ -7,6 +7,7 @@ import '../../../models/chat_message.dart';
 import '../../../models/destination.dart';
 import '../../../services/ai_assistant_service.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
+import '../widgets/formatted_message_view.dart';
 
 class AiChatScreen extends StatefulWidget {
   final String? initialPrompt;
@@ -510,13 +511,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        message.text,
-                        style: const TextStyle(
+                      FormattedMessageView(
+                        text: message.text,
+                        baseStyle: const TextStyle(
                           fontSize: 13,
                           height: 1.5,
                           color: AppColors.textPrimaryLight,
                         ),
+                        bulletColor: AppColors.primary,
                       ),
                       const SizedBox(height: 6),
                       Align(

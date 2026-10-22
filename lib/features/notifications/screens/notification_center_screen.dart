@@ -26,6 +26,18 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     _repository.init();
   }
 
+  String _formatDateSafe(DateTime dt, String pattern) {
+    try {
+      return DateFormat(pattern, 'id_ID').format(dt);
+    } catch (_) {
+      try {
+        return DateFormat(pattern).format(dt);
+      } catch (_) {
+        return dt.toString();
+      }
+    }
+  }
+
   void _openCreateReminderSheet() {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
@@ -39,8 +51,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final timeFormat = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
-
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
@@ -225,7 +235,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                timeFormat.format(selectedDate),
+                                _formatDateSafe(
+                                  selectedDate,
+                                  'dd MMM yyyy, HH:mm',
+                                ),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -627,10 +640,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                               !notif.isDelivered;
                           final color = _getTypeColor(notif.type);
                           final icon = _getTypeIcon(notif.type);
-                          final timeStr = DateFormat(
+                          final timeStr = _formatDateSafe(
+                            notif.scheduledTime,
                             'dd MMM, HH:mm',
-                            'id_ID',
-                          ).format(notif.scheduledTime);
+                          );
 
                           return Dismissible(
                             key: ValueKey(notif.id),

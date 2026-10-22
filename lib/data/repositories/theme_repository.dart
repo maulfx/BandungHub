@@ -51,11 +51,11 @@ class ThemeRepository extends ChangeNotifier {
   static String getModeLabel(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'Mode Terang (Light)';
+        return 'Terang';
       case ThemeMode.dark:
-        return 'Mode Gelap (Dark)';
+        return 'Gelap';
       case ThemeMode.system:
-        return 'Ikuti Sistem (Otomatis)';
+        return 'Default';
     }
   }
 

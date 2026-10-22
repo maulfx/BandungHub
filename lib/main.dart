@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
 import 'data/repositories/auth_repository.dart';
@@ -12,6 +13,12 @@ import 'services/supabase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await initializeDateFormatting('id_ID', null);
+    await initializeDateFormatting('id', null);
+  } catch (e) {
+    debugPrint('Locale initialization error: $e');
+  }
   await SupabaseService().init();
   await ThemeRepository().init();
   await AuthRepository().init();

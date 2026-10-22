@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/app_notification.dart';
@@ -29,7 +30,12 @@ class NotificationRepository extends ChangeNotifier {
       .toList();
 
   Future<void> init() async {
+    try {
+      await initializeDateFormatting('id_ID', null);
+      await initializeDateFormatting('id', null);
+    } catch (_) {}
     await _service.init();
+    await _service.requestPermissions();
     await _loadFromStorage();
 
     // Default welcome notification if empty
@@ -160,6 +166,14 @@ class NotificationRepository extends ChangeNotifier {
         id: numericId,
         title: title,
         body: body,
+        payload: notifId,
+      );
+    } else {
+      await _service.scheduleNotification(
+        id: numericId,
+        title: title,
+        body: body,
+        scheduledDate: scheduledTime,
         payload: notifId,
       );
     }

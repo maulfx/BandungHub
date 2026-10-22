@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,6 +21,8 @@ class NotificationService {
     if (_isInitialized) return;
 
     try {
+      tz.initializeTimeZones();
+
       const androidSettings = AndroidInitializationSettings(
         '@mipmap/ic_launcher',
       );
@@ -45,6 +49,9 @@ class NotificationService {
           >();
       if (androidPlatform != null) {
         final granted = await androidPlatform.requestNotificationsPermission();
+        try {
+          await androidPlatform.requestExactAlarmsPermission();
+        } catch (_) {}
         return granted ?? false;
       }
       return true;
@@ -84,6 +91,53 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('NotificationService showNotification error: $e');
+    }
+  }
+
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    String? payload,
+  }) async {
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+      var tzScheduled = tz.TZDateTime.from(scheduledDate, tz.local);
+      if (tzScheduled.isBefore(now)) {
+        tzScheduled = now.add(const Duration(seconds: 1));
+      }
+
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzScheduled,
+        notificationDetails: _buildNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('NotificationService scheduleNotification error: $e');
+      // Fallback for devices restricting exact alarms
+      try {
+        final now = tz.TZDateTime.now(tz.local);
+        var tzScheduled = tz.TZDateTime.from(scheduledDate, tz.local);
+        if (tzScheduled.isBefore(now)) {
+          tzScheduled = now.add(const Duration(seconds: 1));
+        }
+        await _plugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: tzScheduled,
+          notificationDetails: _buildNotificationDetails(),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      } catch (fallbackError) {
+        debugPrint('NotificationService fallback schedule error: $fallbackError');
+      }
     }
   }
 

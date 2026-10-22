@@ -76,6 +76,263 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showChangeAvatarDialog() {
+    final urlController = TextEditingController();
+    final presets = [
+      {
+        'label': 'Bocchi 🎸',
+        'url': 'assets/mini_game/bocchi.png',
+        'isAsset': true,
+      },
+      {
+        'label': 'Traveler 🎒',
+        'url':
+            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
+        'isAsset': false,
+      },
+      {
+        'label': 'Petualang 🧢',
+        'url':
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=250&q=80',
+        'isAsset': false,
+      },
+      {
+        'label': 'Outdoor 🌲',
+        'url':
+            'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=250&q=80',
+        'isAsset': false,
+      },
+      {
+        'label': 'Explorer 📷',
+        'url':
+            'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=250&q=80',
+        'isAsset': false,
+      },
+      {
+        'label': 'Hiker 🥾',
+        'url':
+            'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=250&q=80',
+        'isAsset': false,
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.getCardColor(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.add_a_photo_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Ganti Foto Profil',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Pilih Avatar Keren BandungHub',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: presets.map((p) {
+                    final isAsset = p['isAsset'] as bool;
+                    final url = p['url'] as String;
+                    final label = p['label'] as String;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        Navigator.pop(sheetContext);
+                        await _authRepo.updateProfile(avatarUrl: url);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Foto profil berhasil diubah ke $label!'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        width: 96,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.getBackgroundColor(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.getBorderColor(context),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundImage: isAsset
+                                  ? AssetImage(url) as ImageProvider
+                                  : NetworkImage(url),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 10),
+                const Text(
+                  'Atau Masukkan Link / URL Foto Kustom',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: urlController,
+                        decoration: InputDecoration(
+                          hintText: 'https://example.com/foto.jpg',
+                          hintStyle: const TextStyle(fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final inputUrl = urlController.text.trim();
+                        if (inputUrl.isNotEmpty) {
+                          Navigator.pop(sheetContext);
+                          await _authRepo.updateProfile(avatarUrl: inputUrl);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Foto profil berhasil diperbarui!'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Pasang'),
+                    ),
+                  ],
+                ),
+                if (_authRepo.currentUser?.avatarUrl != null &&
+                    _authRepo.currentUser!.avatarUrl!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(sheetContext);
+                        await _authRepo.updateProfile(clearAvatar: true);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Foto profil berhasil dihapus (kembali ke bawaan).'),
+                              backgroundColor: AppColors.secondary,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      label: const Text('Hapus Foto Profil Saat Ini'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _openThemeSelectorDialog() {
     showDialog(
       context: context,
@@ -91,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Icon(Icons.palette_outlined, color: AppColors.primary),
                   SizedBox(width: 8),
-                  Text('Pilih Tema Aplikasi'),
+                  Text('Pilih Tema'),
                 ],
               ),
               content: Column(
@@ -102,7 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icons.settings_brightness_rounded,
                       color: AppColors.primary,
                     ),
-                    title: const Text('Ikuti Sistem (Otomatis)'),
+                    title: const Text('Default (Sistem)'),
                     trailing: currentMode == ThemeMode.system
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -125,7 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icons.light_mode_rounded,
                       color: AppColors.secondaryLight,
                     ),
-                    title: const Text('Mode Terang (Light)'),
+                    title: const Text('Terang (Light)'),
                     trailing: currentMode == ThemeMode.light
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -148,7 +405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Icons.dark_mode_rounded,
                       color: AppColors.primaryLight,
                     ),
-                    title: const Text('Mode Gelap (Dark)'),
+                    title: const Text('Gelap (Dark)'),
                     trailing: currentMode == ThemeMode.dark
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -381,51 +638,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 const SizedBox(height: 8),
 
-                // User Avatar & Badge
+                // User Avatar & Badge with Photo Editor
                 Center(
-                  child: Stack(
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 46,
-                        backgroundColor: (_authRepo.isAdmin
-                                ? const Color(0xFF673AB7)
-                                : AppColors.primary)
-                            .withValues(alpha: 0.12),
-                        child: Icon(
-                          _authRepo.isAdmin
-                              ? Icons.admin_panel_settings_rounded
-                              : (isGuest
-                                  ? Icons.person_outline_rounded
-                                  : Icons.person_rounded),
-                          size: 50,
-                          color: _authRepo.isAdmin
-                              ? const Color(0xFF673AB7)
-                              : AppColors.primary,
+                      GestureDetector(
+                        onTap: _showChangeAvatarDialog,
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.35),
+                                  width: 2.5,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 48,
+                                backgroundColor: (_authRepo.isAdmin
+                                        ? const Color(0xFF673AB7)
+                                        : AppColors.primary)
+                                    .withValues(alpha: 0.12),
+                                backgroundImage: (_authRepo
+                                                .currentUser?.avatarUrl !=
+                                            null &&
+                                        _authRepo.currentUser!.avatarUrl!
+                                            .trim()
+                                            .isNotEmpty)
+                                    ? (_authRepo.currentUser!.avatarUrl!
+                                            .startsWith('assets/')
+                                        ? AssetImage(_authRepo
+                                                .currentUser!.avatarUrl!)
+                                            as ImageProvider
+                                        : NetworkImage(
+                                            _authRepo.currentUser!.avatarUrl!))
+                                    : null,
+                                child: (_authRepo.currentUser?.avatarUrl ==
+                                            null ||
+                                        _authRepo.currentUser!.avatarUrl!
+                                            .trim()
+                                            .isEmpty)
+                                    ? Icon(
+                                        _authRepo.isAdmin
+                                            ? Icons.admin_panel_settings_rounded
+                                            : (isGuest
+                                                ? Icons.person_outline_rounded
+                                                : Icons.person_rounded),
+                                        size: 52,
+                                        color: _authRepo.isAdmin
+                                            ? const Color(0xFF673AB7)
+                                            : AppColors.primary,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: _authRepo.isAdmin
-                                ? const Color(0xFF673AB7)
-                                : (isGuest
-                                    ? AppColors.secondary
-                                    : AppColors.success),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                      const SizedBox(height: 6),
+                      TextButton.icon(
+                        onPressed: _showChangeAvatarDialog,
+                        icon: const Icon(Icons.edit_rounded, size: 14),
+                        label: const Text(
+                          'Ganti Foto Profil',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
-                          child: Icon(
-                            _authRepo.isAdmin
-                                ? Icons.verified_rounded
-                                : (isGuest
-                                    ? Icons.hiking_rounded
-                                    : Icons.verified_user_rounded),
-                            size: 14,
-                            color: Colors.white,
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
                           ),
+                          visualDensity: VisualDensity.compact,
                         ),
                       ),
                     ],
@@ -651,7 +966,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               Column(
                                 children: [
@@ -692,34 +1007,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     'Destinasi Favorit',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color:
-                                          AppColors.getTextSecondary(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                width: 1,
-                                height: 32,
-                                color: AppColors.getBorderColor(context),
-                              ),
-                              Column(
-                                children: [
-                                  Text(
-                                    hasPin ? 'Aktif' : 'Belum Diatur',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: hasPin
-                                          ? AppColors.success
-                                          : AppColors.getTextSecondary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Status PIN',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color:
@@ -888,7 +1175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   : Icons.settings_brightness_rounded),
                           color: AppColors.primary,
                         ),
-                        title: const Text('Mode Tampilan (Tema)'),
+                        title: const Text('Tema'),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,

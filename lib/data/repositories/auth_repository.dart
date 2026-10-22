@@ -291,12 +291,23 @@ class AuthRepository extends ChangeNotifier {
   }
 
   // Update profile details
-  Future<void> updateProfile({String? name, String? avatarUrl}) async {
-    if (_currentUser == null) return;
-    _currentUser = _currentUser!.copyWith(
-      name: name ?? _currentUser!.name,
-      avatarUrl: avatarUrl ?? _currentUser!.avatarUrl,
-    );
+  Future<void> updateProfile({
+    String? name,
+    String? avatarUrl,
+    bool clearAvatar = false,
+  }) async {
+    final effectiveAvatar = clearAvatar ? '' : avatarUrl;
+    if (_currentUser == null) {
+      _currentUser = UserProfile.guest().copyWith(
+        name: name,
+        avatarUrl: effectiveAvatar,
+      );
+    } else {
+      _currentUser = _currentUser!.copyWith(
+        name: name ?? _currentUser!.name,
+        avatarUrl: effectiveAvatar ?? _currentUser!.avatarUrl,
+      );
+    }
     await _storage.saveCurrentUser(_currentUser!);
     notifyListeners();
   }
