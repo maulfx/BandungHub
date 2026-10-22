@@ -9,6 +9,7 @@ import '../../../data/repositories/theme_repository.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
 import '../../auth/screens/register_screen.dart';
+import '../../../data/repositories/offline_sync_repository.dart';
 import '../../academic/screens/course_feedback_screen.dart';
 import '../../converter/screens/travel_converter_screen.dart';
 import '../../offline/screens/offline_sync_screen.dart';
@@ -189,6 +190,133 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showSimplifiedStorageDialog() {
+    final syncRepo = OfflineSyncRepository.instance;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final stats = syncRepo.getCacheStats();
+          final formattedSize = stats['formattedSize'] as String;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.cleaning_services_rounded, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('Penyimpanan & Cache'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Memori Cache:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        formattedSize,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline_rounded,
+                        color: AppColors.success, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '38 Destinasi wisata tersimpan offline',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.getTextSecondary(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final freedBytes = await syncRepo.clearTemporaryCache();
+                      setDialogState(() {});
+                      if (context.mounted) {
+                        Navigator.pop(dialogCtx);
+                        final formattedFreed = freedBytes < 1024 * 1024
+                            ? '${(freedBytes / 1024).toStringAsFixed(1)} KB'
+                            : '${(freedBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Cache berhasil dibersihkan ($formattedFreed dibebaskan).',
+                            ),
+                            backgroundColor: AppColors.primary,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 16),
+                    label: const Text('Bersihkan Cache'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pop(dialogCtx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OfflineSyncScreen(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Pengaturan Teknis Sinkronisasi >',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.getTextSecondary(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Tutup'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -592,7 +720,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Column(
                                 children: [
                                   Text(
-                                    hasPin ? 'Aktif' : 'Nonaktif',
+                                    hasPin ? 'Aktif' : 'Belum Diatur',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -659,12 +787,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.primary,
                         ),
                         title: const Text('Autentikasi Biometrik'),
-                        subtitle: Text(
-                          isBiometric
-                              ? 'Aktif (Sidik Jari / Face Unlock diizinkan)'
-                              : 'Nonaktifkan sensor biometrik untuk masuk',
-                          style: const TextStyle(fontSize: 12),
-                        ),
                         value: isBiometric,
                         onChanged: (val) async {
                           final messenger = ScaffoldMessenger.of(context);
@@ -690,15 +812,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.secondary,
                         ),
                         title: Text(
-                          hasPin
-                              ? 'Ubah PIN Keamanan'
-                              : 'Atur PIN Keamanan (6 Digit)',
-                        ),
-                        subtitle: Text(
-                          hasPin
-                              ? 'PIN 6-digit tersimpan aman'
-                              : 'PIN belum diatur',
-                          style: const TextStyle(fontSize: 12),
+                          hasPin ? 'Change PIN' : 'PIN Belum Diatur',
                         ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
@@ -722,10 +836,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: AppColors.warning,
                           ),
                           title: const Text('Hapus PIN Keamanan'),
-                          subtitle: const Text(
-                            'Nonaktifkan verifikasi PIN saat login',
-                            style: TextStyle(fontSize: 12),
-                          ),
                           trailing: const Icon(
                             Icons.delete_outline_rounded,
                             color: AppColors.warning,
@@ -791,10 +901,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.primary,
                         ),
                         title: const Text('Mode Tampilan (Tema)'),
-                        subtitle: Text(
-                          _themeRepo.themeModeLabel,
-                          style: const TextStyle(fontSize: 12),
-                        ),
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -804,19 +910,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Ubah',
-                                style: TextStyle(
+                                _themeRepo.themeModeLabel,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.primary,
                                 ),
                               ),
-                              SizedBox(width: 4),
-                              Icon(
+                              const SizedBox(width: 4),
+                              const Icon(
                                 Icons.chevron_right_rounded,
                                 size: 16,
                                 color: AppColors.primary,
@@ -844,10 +950,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.primary,
                         ),
                         title: const Text('Konverter Mata Uang & Waktu'),
-                        subtitle: const Text(
-                          'Kalkulator kurs valas dan penyesuaian zona waktu wisatawan',
-                          style: TextStyle(fontSize: 12),
-                        ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
                           Navigator.push(
@@ -861,35 +963,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(
-                          Icons.cloud_sync_rounded,
-                          color: AppColors.primary,
-                        ),
-                        title: const Text('Sinkronisasi & Cache Offline'),
-                        subtitle: const Text(
-                          'Kelola mode offline, antrean sinkronisasi, & penyimpanan lokal',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const OfflineSyncScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(
                           Icons.school_rounded,
                           color: AppColors.secondary,
                         ),
                         title: const Text('Kesan & Pesan Kuliah'),
-                        subtitle: const Text(
-                          'Evaluasi & refleksi akademik untuk dosen pengampu',
-                          style: TextStyle(fontSize: 12),
-                        ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
                           Navigator.push(
@@ -906,11 +983,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Icons.info_outline_rounded,
                           color: AppColors.textSecondaryLight,
                         ),
-                        title: const Text('Versi Aplikasi'),
-                        trailing: Text(
-                          'v${AppConstants.appVersion}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        title: const Text('Versi Aplikasi & Penyimpanan'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'v${AppConstants.appVersion}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.getTextSecondary(context),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
                         ),
+                        onTap: _showSimplifiedStorageDialog,
                       ),
                     ],
                   ),
