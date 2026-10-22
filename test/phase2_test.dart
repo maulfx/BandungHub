@@ -283,7 +283,7 @@ void main() {
         expect(find.text('Profil & Keamanan Akun'), findsOneWidget);
         expect(find.text('Wisatawan Bandung'), findsOneWidget);
         expect(find.text('traveler@bandunghub.id'), findsOneWidget);
-        expect(find.text('Keamanan & Privasi (Phase 2)'), findsOneWidget);
+        expect(find.text('Keamanan & Privasi'), findsOneWidget);
         expect(find.text('Autentikasi Biometrik'), findsOneWidget);
         expect(find.text('Keluar dari Akun'), findsOneWidget);
       },

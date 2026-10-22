@@ -157,9 +157,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Check for Phase 9 theme section header
+        // Check for theme section header
         expect(
-          find.text('Tampilan & Aksesibilitas (Phase 9)'),
+          find.text('Tampilan & Aksesibilitas'),
           findsOneWidget,
         );
         expect(find.text('Mode Tampilan (Tema)'), findsOneWidget);

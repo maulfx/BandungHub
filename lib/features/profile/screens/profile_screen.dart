@@ -103,10 +103,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: AppColors.primary,
                     ),
                     title: const Text('Ikuti Sistem (Otomatis)'),
-                    subtitle: const Text(
-                      'Menyesuaikan tema terang / gelap HP',
-                      style: TextStyle(fontSize: 12),
-                    ),
                     trailing: currentMode == ThemeMode.system
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -130,10 +126,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: AppColors.secondaryLight,
                     ),
                     title: const Text('Mode Terang (Light)'),
-                    subtitle: const Text(
-                      'Nuansa hijau Parahyangan segar & cerah',
-                      style: TextStyle(fontSize: 12),
-                    ),
                     trailing: currentMode == ThemeMode.light
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -157,10 +149,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: AppColors.primaryLight,
                     ),
                     title: const Text('Mode Gelap (Dark)'),
-                    subtitle: const Text(
-                      'Nuansa malam Bandung elegan & hemat baterai',
-                      style: TextStyle(fontSize: 12),
-                    ),
                     trailing: currentMode == ThemeMode.dark
                         ? const Icon(
                             Icons.check_circle_rounded,
@@ -766,9 +754,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               size: 18,
                               color: AppColors.primary,
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Keamanan & Privasi (Phase 2)',
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Keamanan & Privasi',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -859,7 +847,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Theme & Appearance Section (Phase 9)
+                // Theme & Appearance Section
                 Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -877,7 +865,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Tampilan & Aksesibilitas (Phase 9)',
+                              'Tampilan & Aksesibilitas',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
