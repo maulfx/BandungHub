@@ -32,7 +32,6 @@ class _GameScreenState extends State<GameScreen>
   ui.Image? _bgImage;
   ui.Image? _birdImage;
   ui.Image? _ghostImage;
-  bool _assetsLoaded = false;
 
   @override
   void initState() {
@@ -64,9 +63,7 @@ class _GameScreenState extends State<GameScreen>
       // Fallbacks will be used seamlessly
     }
     if (mounted) {
-      setState(() {
-        _assetsLoaded = true;
-      });
+      setState(() {});
     }
   }
 
@@ -1462,7 +1459,6 @@ class _BocchiGamePainter extends CustomPainter {
 
   void _drawBocchiVectorFallback(Canvas canvas, JumperPlayer player) {
     final centerX = player.x + player.width / 2;
-    final centerY = player.y + player.height / 2;
 
     // Pink Tracksuit Body
     final bodyPaint = Paint()..color = const Color(0xFFFF6B97);

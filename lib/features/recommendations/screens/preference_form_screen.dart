@@ -102,7 +102,7 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
               child: const Row(
                 children: [
                   Icon(
-                    Icons.auto_awesome_rounded,
+                    Icons.tune_rounded,
                     color: AppColors.primary,
                     size: 28,
                   ),
@@ -112,7 +112,7 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Rekomendasi Pintar BandungHub',
+                          'Kustomisasi Preferensi Wisata',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -414,7 +414,7 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _submitForm,
-                icon: const Icon(Icons.auto_awesome_rounded),
+                icon: const Icon(Icons.recommend_rounded),
                 label: const Text('Hitung Rekomendasi Destinasi'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),

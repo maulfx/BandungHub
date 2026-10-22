@@ -516,12 +516,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           );
                                         },
                                         icon: const Icon(
-                                          Icons.auto_awesome_rounded,
+                                          Icons.tune_rounded,
                                           size: 14,
                                           color: Colors.white,
                                         ),
                                         label: const Text(
-                                          'Rekomendasi Cerdas',
+                                          'Filter Preferensi',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,

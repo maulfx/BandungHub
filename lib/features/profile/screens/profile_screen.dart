@@ -1041,8 +1041,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               size: 18,
                               color: AppColors.primary,
                             ),
-                            const SizedBox(width: 8),
-                            const Text(
+                            SizedBox(width: 8),
+                            Text(
                               'Keamanan & Privasi',
                               style: TextStyle(
                                 fontSize: 13,
@@ -1433,7 +1433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildAdminStatTile(
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Icons.support_agent_rounded,
                   label: 'Asisten AI',
                   value: 'Online',
                   color: const Color(0xFF2E7D32),

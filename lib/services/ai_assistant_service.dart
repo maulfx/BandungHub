@@ -365,7 +365,7 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        'Tugas saya menemani wargi merencanakan liburan terbaik di Bandung Raya—mulai dari mencari destinasi alam pegunungan, kuliner Sunda legendaris, rute navigasi peta, hingga menyusun jadwal itinerary harian.',
+        'Tugas saya menemani wargi merencanakan liburan terbaik di Bandung Raya, mulai dari mencari destinasi alam pegunungan, kuliner Sunda legendaris, rute navigasi peta, hingga menyusun jadwal itinerary harian.',
       );
       buffer.writeln();
       buffer.writeln('Ada yang bisa Kang Bandung bantu hari ini?');
@@ -483,16 +483,16 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        '1. **Kawasan Kuliner Punclut** — Menikmati nasi timbel, ayam goreng serundeng, dan sambal terasi sambil menatap gemerlap malam kota Bandung dari ketinggian.',
+        '1. **Kawasan Kuliner Punclut**: Menikmati nasi timbel, ayam goreng serundeng, dan sambal terasi sambil menatap gemerlap malam kota Bandung dari ketinggian.',
       );
       buffer.writeln(
-        '2. **Sudirman Street Day & Night Market** — Sentra kuliner malam legendaris dengan aneka street food khas Bandung.',
+        '2. **Sudirman Street Day & Night Market**: Sentra kuliner malam legendaris dengan aneka street food khas Bandung.',
       );
       buffer.writeln(
-        '3. **Floating Market Lembang** — Jajanan tradisional seperti colenak, tahu susu, dan es goyobod yang dijajakan di perahu terapung.',
+        '3. **Floating Market Lembang**: Jajanan tradisional seperti colenak, tahu susu, dan es goyobod yang dijajakan di perahu terapung.',
       );
       buffer.writeln(
-        '4. **Jalan Braga & Braga CityWalk** — Kafe estetik peninggalan kolonial Belanda dan kopi khas Bandung.',
+        '4. **Jalan Braga & Braga CityWalk**: Kafe estetik peninggalan kolonial Belanda dan kopi khas Bandung.',
       );
       buffer.writeln();
       buffer.writeln(
@@ -518,16 +518,16 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        '1. **Kawah Putih Ciwidey** — Kawah vulkanik eksotis berwarna toska di Ciwidey.',
+        '1. **Kawah Putih Ciwidey**: Kawah vulkanik eksotis berwarna toska di Ciwidey.',
       );
       buffer.writeln(
-        '2. **Tangkuban Parahu** — Ikon legendaris Jawa Barat dengan kawah aktif megah.',
+        '2. **Tangkuban Parahu**: Ikon legendaris Jawa Barat dengan kawah aktif megah.',
       );
       buffer.writeln(
-        '3. **Dusun Bambu** — Ekowisata alam asri bernuansa pedesaan Sunda.',
+        '3. **Dusun Bambu**: Ekowisata alam asri bernuansa pedesaan Sunda.',
       );
       buffer.writeln(
-        '4. **Tebing Keraton** — Spot panorama kabut pagi dan sunrise spektakuler.',
+        '4. **Tebing Keraton**: Spot panorama kabut pagi dan sunrise spektakuler.',
       );
       buffer.writeln();
       buffer.writeln(
@@ -551,16 +551,16 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        '1. **Jalan Braga & Braga CityWalk** — **Gratis (Tanpa Tiket)**. Jalan-jalan menikmati arsitektur klasik art deco.',
+        '1. **Jalan Braga & Braga CityWalk**: **Gratis (Tanpa Tiket)**. Jalan-jalan menikmati arsitektur klasik art deco.',
       );
       buffer.writeln(
-        '2. **Gedung Sate** — Tiket masuk hanya **Rp 5.000**, menyimpan museum interaktif.',
+        '2. **Gedung Sate**: Tiket masuk hanya **Rp 5.000**, menyimpan museum interaktif.',
       );
       buffer.writeln(
-        '3. **Museum Geologi Bandung** — Tiket masuk hanya **Rp 3.000**, sarat edukasi sejarah purbakala.',
+        '3. **Museum Geologi Bandung**: Tiket masuk hanya **Rp 3.000**, sarat edukasi sejarah purbakala.',
       );
       buffer.writeln(
-        '4. **Tebing Keraton** — Tiket **Rp 17.000**, pemandangan alam spektakuler di atas bukit Bandung.',
+        '4. **Tebing Keraton**: Tiket **Rp 17.000**, pemandangan alam spektakuler di atas bukit Bandung.',
       );
       buffer.writeln();
       buffer.writeln(
@@ -583,16 +583,16 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        '1. **Gedung Sate** — Ikon legendaris bernilai sejarah tinggi dengan ornamen tusuk sate khas.',
+        '1. **Gedung Sate**: Ikon legendaris bernilai sejarah tinggi dengan ornamen tusuk sate khas.',
       );
       buffer.writeln(
-        '2. **Museum Geologi Bandung** — Fosil dinosaurus dan warisan kebumian nusantara sejak 1928.',
+        '2. **Museum Geologi Bandung**: Fosil dinosaurus dan warisan kebumian nusantara sejak 1928.',
       );
       buffer.writeln(
-        '3. **Jalan Braga & Braga CityWalk** — Jejak kawasan elit kolonial tempo dulu.',
+        '3. **Jalan Braga & Braga CityWalk**: Jejak kawasan elit kolonial tempo dulu.',
       );
       buffer.writeln(
-        '4. **Saung Angklung Udjo** — Pertunjukan seni musik bambu tradisional interaktif warisan UNESCO.',
+        '4. **Saung Angklung Udjo**: Pertunjukan seni musik bambu tradisional interaktif warisan UNESCO.',
       );
       buffer.writeln();
       buffer.writeln(
@@ -616,16 +616,16 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
       );
       buffer.writeln();
       buffer.writeln(
-        '1. **Floating Market Lembang** — Menikmati danau buatan, memberi makan kelinci, dan kota mini.',
+        '1. **Floating Market Lembang**: Menikmati danau buatan, memberi makan kelinci, dan kota mini.',
       );
       buffer.writeln(
-        '2. **Dusun Bambu** — Ekowisata asri berkonsep pedesaan Sunda dengan playground alam terbuka.',
+        '2. **Dusun Bambu**: Ekowisata asri berkonsep pedesaan Sunda dengan playground alam terbuka.',
       );
       buffer.writeln(
-        '3. **Saung Angklung Udjo** — Pertunjukan musik edukatif interaktif untuk anak-anak.',
+        '3. **Saung Angklung Udjo**: Pertunjukan musik edukatif interaktif untuk anak-anak.',
       );
       buffer.writeln(
-        '4. **Trans Studio Bandung** — Theme park indoor terbesar dengan wahana kelas dunia.',
+        '4. **Trans Studio Bandung**: Theme park indoor terbesar dengan wahana kelas dunia.',
       );
       buffer.writeln();
       buffer.writeln(

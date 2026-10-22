@@ -672,7 +672,7 @@ class _TravelConverterScreenState extends State<TravelConverterScreen>
                   ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<TimezoneInfo>(
-                    value: _selectedTargetTz,
+                    initialValue: _selectedTargetTz,
                     isExpanded: true,
                     decoration: InputDecoration(
                       contentPadding: const EdgeInsets.symmetric(

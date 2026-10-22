@@ -159,7 +159,7 @@ class ItineraryExportService {
     // Rencana Hari demi Hari
     for (int day = 1; day <= itinerary.durationDays; day++) {
       final dayDate = itinerary.startDate.add(Duration(days: day - 1));
-      buffer.writeln('  <div class="day-header">📍 Hari $day — ${AppDateUtils.formatFullDate(dayDate)}</div>');
+      buffer.writeln('  <div class="day-header">📍 Hari $day: ${AppDateUtils.formatFullDate(dayDate)}</div>');
 
       final dayItems = itemsByDay[day] ?? [];
       if (dayItems.isEmpty) {
@@ -183,7 +183,7 @@ class ItineraryExportService {
       buffer.writeln('  <div style="margin-top:20px; font-size:12px; color:#718096; font-family:monospace;">SHA-256 Integritas: ${itinerary.savedHash}</div>');
     }
 
-    buffer.writeln('  <div class="footer">Dibuat dengan <strong>BandungHub</strong> — Smart Companion & Itinerary Wisata Bandung</div>');
+    buffer.writeln('  <div class="footer">Dibuat dengan <strong>BandungHub</strong>: Panduan & Itinerary Wisata Bandung</div>');
     buffer.writeln('</body>');
     buffer.writeln('</html>');
 
