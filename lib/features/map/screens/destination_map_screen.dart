@@ -13,6 +13,7 @@ import '../../../services/location_service.dart';
 import '../../../services/map_service.dart';
 import '../../../services/sensor_service.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
+import '../widgets/compass_dial_widget.dart';
 
 class DestinationMapScreen extends StatefulWidget {
   final Destination? initialDestination;
@@ -38,7 +39,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   Destination? _selectedDestination;
 
   // Search state
-  String _searchQuery = '';
   List<Destination> _searchResults = [];
   bool _isSearching = false;
   bool _showSearchResults = false;
@@ -62,6 +62,9 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     super.initState();
     _selectedDestination = widget.initialDestination;
     _fetchUserLocation(showNotice: false);
+
+    // Initialize with cached sensor reading
+    _orientation = _sensorService.currentOrientation;
 
     // Listen to accelerometer / orientation compass stream
     _sensorService.startListening();
@@ -143,7 +146,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
     if (q.isEmpty) {
       setState(() {
-        _searchQuery = '';
         _searchResults = [];
         _showSearchResults = false;
         _isSearching = false;
@@ -152,7 +154,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     }
 
     setState(() {
-      _searchQuery = q;
       _isSearching = true;
       _showSearchResults = true;
     });
@@ -1069,324 +1070,359 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Material(
-              color: AppColors.getCardColor(context),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 20,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header
-                      Row(
+            return StreamBuilder<CompassOrientation>(
+              stream: _sensorService.orientationStream,
+              initialData: _sensorService.currentOrientation,
+              builder: (context, snapshot) {
+                final orientation =
+                    snapshot.data ?? _sensorService.currentOrientation;
+
+                return Material(
+                  color: AppColors.getCardColor(context),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.explore_rounded,
-                              color: AppColors.primary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Kompas & Sensor Akselerometer',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'Orientasi perangkat real-time di Bandung',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.getTextSecondary(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-
-                      // Large Compass Dial
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 130,
-                            height: 130,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.getSurfaceColor(context),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                          // Dial markings
-                          const Positioned(
-                            top: 8,
-                            child: Text(
-                              'U',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: Colors.redAccent,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            bottom: 8,
-                            child: Text(
-                              'S',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            right: 8,
-                            child: Text(
-                              'T',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            left: 8,
-                            child: Text(
-                              'B',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          // Rotating Needle
-                          Transform.rotate(
-                            angle: -_orientation.heading * (math.pi / 180),
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.navigation_rounded,
-                                  color: Colors.redAccent,
-                                  size: 48,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Heading Degree Text
-                      Text(
-                        '${_orientation.heading.toInt()}° ${_orientation.cardinalLabel}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Accelerometer Metrics Cards (Pitch & Roll)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.getSurfaceColor(context),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.getBorderColor(context),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Kemiringan Pitch',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color:
-                                          AppColors.getTextSecondary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_orientation.pitch.toStringAsFixed(1)}°',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.getSurfaceColor(context),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.getBorderColor(context),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Kemiringan Roll',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color:
-                                          AppColors.getTextSecondary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_orientation.roll.toStringAsFixed(1)}°',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // If a destination is selected, display bearing guide
-                      if (_selectedDestination != null &&
-                          destBearing != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
+                          // Header
+                          Row(
                             children: [
-                              const Icon(
-                                Icons.near_me_rounded,
-                                color: AppColors.primary,
-                                size: 22,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.explore_rounded,
+                                  color: AppColors.primary,
+                                  size: 24,
+                                ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Arah ke ${_selectedDestination!.name}:',
-                                      style: const TextStyle(
-                                        fontSize: 12,
+                                    const Text(
+                                      'Kompas & Orientasi Real-Time',
+                                      style: TextStyle(
+                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Text(
-                                      '${destBearing.toInt()}° (${SensorService.getCardinalDirection(destBearing).label}) dari posisi Anda',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.getTextSecondary(
-                                            context),
-                                      ),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.greenAccent,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Sensor aktif • Bergerak real-time',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.getTextSecondary(
+                                                context),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: () => Navigator.pop(ctx),
+                              ),
                             ],
                           ),
-                        ),
-                      ],
+                          const Divider(height: 20),
 
-                      const SizedBox(height: 18),
-
-                      // Action Buttons: Follow Mode / Reset North
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                _mapController.rotate(0);
-                                setState(() => _isCompassFollowMode = false);
-                                Navigator.pop(ctx);
-                              },
-                              icon: const Icon(Icons.north_rounded, size: 16),
-                              label: const Text('Reset Utara'),
-                            ),
+                          // Large Live Animated Compass Dial
+                          CompassDialWidget(
+                            heading: orientation.heading,
+                            destBearing: destBearing,
+                            size: 165,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _isCompassFollowMode =
-                                      !_isCompassFollowMode;
-                                });
-                                if (_isCompassFollowMode) {
-                                  _mapController.rotate(_orientation.heading);
-                                } else {
-                                  _mapController.rotate(0);
-                                }
-                                Navigator.pop(ctx);
-                              },
-                              icon: Icon(
-                                _isCompassFollowMode
-                                    ? Icons.check_circle_rounded
-                                    : Icons.sync_rounded,
-                                size: 16,
+                          const SizedBox(height: 12),
+
+                          // Heading Degree Readout
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${orientation.heading.toInt()}°',
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                              label: Text(
-                                _isCompassFollowMode
-                                    ? 'Matikan Putar Peta'
-                                    : 'Putar Peta Otomatis',
-                                style: const TextStyle(fontSize: 12),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${orientation.cardinalLabel} (${orientation.cardinalDirection})',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Pitch & Roll Sensor Metrics Cards
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.getSurfaceColor(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.getBorderColor(context),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Kemiringan Pitch',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.getTextSecondary(
+                                              context),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${orientation.pitch.toStringAsFixed(1)}°',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.swap_vert_rounded,
+                                            size: 16,
+                                            color: AppColors.getTextSecondary(
+                                                context),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.getSurfaceColor(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.getBorderColor(context),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Kemiringan Roll',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.getTextSecondary(
+                                              context),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${orientation.roll.toStringAsFixed(1)}°',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.swap_horiz_rounded,
+                                            size: 16,
+                                            color: AppColors.getTextSecondary(
+                                                context),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // If destination selected, display live guide relative to compass heading
+                          if (_selectedDestination != null &&
+                              destBearing != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.secondary.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.secondary
+                                      .withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.secondary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.near_me_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Menuju ${_selectedDestination!.name}:',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Azimuth ${destBearing.toInt()}° (${SensorService.getCardinalDirection(destBearing).label}) • Indikator titik pada kompas',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.getTextSecondary(
+                                                context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                          ],
+
+                          const SizedBox(height: 18),
+
+                          // Action Buttons: Follow Mode / Reset North
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    _mapController.rotate(0);
+                                    setState(
+                                        () => _isCompassFollowMode = false);
+                                    setSheetState(() {});
+                                    Navigator.pop(ctx);
+                                  },
+                                  icon: const Icon(Icons.north_rounded,
+                                      size: 16),
+                                  label: const Text('Reset Utara'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    final newMode = !_isCompassFollowMode;
+                                    setState(() {
+                                      _isCompassFollowMode = newMode;
+                                    });
+                                    setSheetState(() {});
+                                    if (newMode) {
+                                      _mapController
+                                          .rotate(orientation.heading);
+                                    } else {
+                                      _mapController.rotate(0);
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isCompassFollowMode
+                                        ? AppColors.primary
+                                        : null,
+                                    foregroundColor: _isCompassFollowMode
+                                        ? Colors.white
+                                        : null,
+                                  ),
+                                  icon: Icon(
+                                    _isCompassFollowMode
+                                        ? Icons.check_circle_rounded
+                                        : Icons.sync_rounded,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    _isCompassFollowMode
+                                        ? 'Mode Putar Aktif'
+                                        : 'Putar Peta Otomatis',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );

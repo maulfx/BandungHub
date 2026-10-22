@@ -6,7 +6,6 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../models/user_profile.dart';
 import '../../../shared/widgets/google_logo_icon.dart';
 import '../../navigation/main_navigation_screen.dart';
-import 'pin_lock_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {

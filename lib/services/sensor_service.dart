@@ -48,13 +48,21 @@ class SensorService {
   /// Stream of horizontal game tilt steering: -1.0 (max left) to +1.0 (max right)
   Stream<double> get gameTiltStream => _gameTiltController.stream;
 
+  CompassOrientation _currentOrientation = CompassOrientation.initial;
+  CompassOrientation get currentOrientation => _currentOrientation;
+
   // Cached sensor states for orientation fusion
   double _lastAccelX = 0;
   double _lastAccelY = 0;
   double _lastAccelZ = 9.8;
   double _lastMagX = 0;
   double _lastMagY = 0;
-  double _currentHeading = 0;
+  double _lastMagZ = 0;
+  bool _hasMagnetometerData = false;
+  bool _hasInitialHeading = false;
+  double _fusionHeading = 0.0;
+  double _gyroHeading = 0.0;
+  DateTime? _lastGyroTime;
 
   double _currentTilt = 0.0;
   // Smoothed gyro velocity (EMA) for game tilt
@@ -68,14 +76,30 @@ class SensorService {
     _isListening = true;
 
     try {
-      // 1. Gyroscope for rapid game tilt dynamics - smoothed via EMA
+      // 1. Gyroscope for rapid game tilt dynamics and instant compass response
       _gyroSub = gyroscopeEventStream(
         samplingPeriod: SensorInterval.gameInterval,
       ).listen(
         (event) {
+          final now = DateTime.now();
+          if (_lastGyroTime != null) {
+            final dt = now.difference(_lastGyroTime!).inMicroseconds / 1e6;
+            if (dt > 0 && dt < 0.5) {
+              // In portrait mode: turning clockwise (right) gives negative Z gyro rate
+              // Rate in degrees/sec = -event.z * 180 / math.pi
+              final dYaw = -event.z * (180 / math.pi) * dt;
+              _gyroHeading = (_gyroHeading + dYaw) % 360;
+              if (_gyroHeading < 0) _gyroHeading += 360;
+
+              _fusionHeading = (_fusionHeading + dYaw) % 360;
+              if (_fusionHeading < 0) _fusionHeading += 360;
+            }
+          }
+          _lastGyroTime = now;
+
           // In portrait: event.y = roll rate, event.z = screen rotation
           final rawRate = (-event.y * 0.4 - event.z * 0.25).clamp(-1.0, 1.0);
-          // EMA smoothing: alpha=0.2 → very smooth, slow to react
+          // EMA smoothing: alpha=0.2 → very smooth
           _smoothedGyroRate = _smoothedGyroRate * 0.8 + rawRate * 0.2;
           // Dead zone threshold to ignore micro-jitter
           if (_smoothedGyroRate.abs() > 0.08) {
@@ -83,6 +107,11 @@ class SensorService {
                 (_currentTilt * 0.75 + _smoothedGyroRate * 0.25)
                     .clamp(-1.0, 1.0);
             _gameTiltController.add(_currentTilt);
+          }
+
+          // If no magnetometer hardware (e.g. emulator), compute orientation via gyro
+          if (!_hasMagnetometerData) {
+            _computeOrientation();
           }
         },
         onError: (e) {
@@ -131,6 +160,8 @@ class SensorService {
         (event) {
           _lastMagX = event.x;
           _lastMagY = event.y;
+          _lastMagZ = event.z;
+          _hasMagnetometerData = true;
 
           _computeOrientation();
         },
@@ -160,50 +191,68 @@ class SensorService {
     _isListening = false;
   }
 
-  /// Compute heading, pitch, roll and cardinal direction
+  /// Compute tilt-compensated heading, pitch, roll and cardinal direction
   void _computeOrientation() {
-    // Pitch and Roll in degrees from Accelerometer
-    final pitch = math.atan2(
-          -_lastAccelX,
-          math.sqrt(_lastAccelY * _lastAccelY + _lastAccelZ * _lastAccelZ),
-        ) *
-        180 /
-        math.pi;
+    // Pitch and Roll in radians from Accelerometer
+    final rollRad = math.atan2(
+      _lastAccelX,
+      math.sqrt(_lastAccelY * _lastAccelY + _lastAccelZ * _lastAccelZ),
+    );
+    final pitchRad = math.atan2(_lastAccelY, _lastAccelZ);
 
-    final roll = math.atan2(_lastAccelY, _lastAccelZ) * 180 / math.pi;
+    final pitch = pitchRad * 180 / math.pi;
+    final roll = rollRad * 180 / math.pi;
 
-    // Heading from Magnetometer / Accelerometer
-    double heading;
-    if (_lastMagX != 0 || _lastMagY != 0) {
-      // Calculate magnetic azimuth
-      double rawHeading = math.atan2(_lastMagY, _lastMagX) * 180 / math.pi;
-      if (rawHeading < 0) {
-        rawHeading += 360;
+    // Heading calculation
+    if (_hasMagnetometerData &&
+        (_lastMagX != 0 || _lastMagY != 0 || _lastMagZ != 0)) {
+      // Tilt compensation for magnetometer
+      final cosRoll = math.cos(rollRad);
+      final sinRoll = math.sin(rollRad);
+      final cosPitch = math.cos(pitchRad);
+      final sinPitch = math.sin(pitchRad);
+
+      // Project 3D magnetic field vector onto horizontal plane
+      final xh = _lastMagX * cosRoll + _lastMagZ * sinRoll;
+      final yh = _lastMagX * sinPitch * sinRoll +
+          _lastMagY * cosPitch -
+          _lastMagZ * sinPitch * cosRoll;
+
+      // Azimuth from North (0° = North, 90° = East, 180° = South, 270° = West)
+      double magHeading = (math.atan2(-xh, yh) * 180 / math.pi + 360) % 360;
+
+      if (!_hasInitialHeading) {
+        _fusionHeading = magHeading;
+        _hasInitialHeading = true;
+      } else {
+        // Complementary filter: blend gyro responsiveness with absolute magnetic heading
+        final diff = magHeading - _fusionHeading;
+        final shortestDiff = ((diff + 180) % 360 + 360) % 360 - 180;
+        _fusionHeading = (_fusionHeading + shortestDiff * 0.25) % 360;
+        if (_fusionHeading < 0) _fusionHeading += 360;
       }
-      heading = rawHeading;
     } else {
-      // Fallback heading from accelerometer roll
-      heading = (_lastAccelX * 18).clamp(-180.0, 180.0);
-      if (heading < 0) heading += 360;
+      // Fallback if magnetometer is missing (e.g. emulator or sensor not ready)
+      if (_lastGyroTime != null) {
+        _fusionHeading = _gyroHeading;
+      } else {
+        // Fallback from accelerometer tilt
+        _fusionHeading = ((_lastAccelX * 20) + 360) % 360;
+      }
     }
 
-    // Low-pass filter for smooth compass dial rotation (alpha=0.10 → very smooth)
-    final diff = heading - _currentHeading;
-    final shortestDiff = ((diff + 180) % 360) - 180;
-    _currentHeading = (_currentHeading + shortestDiff * 0.10) % 360;
-    if (_currentHeading < 0) _currentHeading += 360;
+    if (_fusionHeading.abs() < 0.001) _fusionHeading = 0.0;
+    final cardinal = getCardinalDirection(_fusionHeading);
 
-    final cardinal = getCardinalDirection(_currentHeading);
-
-    _orientationController.add(
-      CompassOrientation(
-        heading: _currentHeading,
-        pitch: pitch,
-        roll: roll,
-        cardinalDirection: cardinal.code,
-        cardinalLabel: cardinal.label,
-      ),
+    _currentOrientation = CompassOrientation(
+      heading: _fusionHeading,
+      pitch: pitch,
+      roll: roll,
+      cardinalDirection: cardinal.code,
+      cardinalLabel: cardinal.label,
     );
+
+    _orientationController.add(_currentOrientation);
   }
 
   /// Helper to convert degrees (0-360) to cardinal directions (Indonesian)
