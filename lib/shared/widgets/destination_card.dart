@@ -213,16 +213,16 @@ class DestinationCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.warning.withValues(
+                                color: AppColors.info.withValues(
                                   alpha: 0.15,
                                 ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
-                                'Data Dummy',
+                                'Rekomendasi Komunitas',
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: AppColors.warning,
+                                  color: AppColors.info,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -413,10 +413,10 @@ class DestinationCard extends StatelessWidget {
                           )
                         else
                           const Text(
-                            'Data Dummy',
+                            'Komunitas',
                             style: TextStyle(
                               fontSize: 10,
-                              color: AppColors.warning,
+                              color: AppColors.info,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

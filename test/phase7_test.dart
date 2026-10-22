@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/features/recommendations/screens/ai_chat_screen.dart';
 import 'package:projek_akhir/models/chat_message.dart';
 import 'package:projek_akhir/services/ai_assistant_service.dart';
@@ -20,7 +20,7 @@ void main() {
         text: 'Rekomendasi wisata alam sejuk di Lembang',
         isUser: true,
         timestamp: DateTime(2026, 3, 1, 10, 30),
-        recommendedDestinations: [DummyDestinations.list.first],
+        recommendedDestinations: [BandungDestinations.list.first],
         isError: false,
       );
 
@@ -33,7 +33,7 @@ void main() {
       expect(reconstructed.recommendedDestinations.length, 1);
       expect(
         reconstructed.recommendedDestinations.first.name,
-        DummyDestinations.list.first.name,
+        BandungDestinations.list.first.name,
       );
     });
   });
@@ -172,7 +172,6 @@ void main() {
         // Check Header
         expect(find.text('Kang Bandung'), findsOneWidget);
         expect(find.byIcon(Icons.smart_toy_rounded), findsWidgets);
-        expect(find.byIcon(Icons.key_rounded), findsOneWidget);
 
         // Check Greeting
         expect(
@@ -216,7 +215,7 @@ void main() {
       },
     );
 
-    testWidgets('AiChatScreen opens API key dialog on key icon tap', (
+    testWidgets('AiChatScreen shows online AI status indicator', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1400);
@@ -226,14 +225,8 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: AiChatScreen()));
       await tester.pumpAndSettle();
 
-      // Tap key icon
-      await tester.tap(find.byIcon(Icons.key_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Pengaturan Gemini API'), findsOneWidget);
-      expect(find.text('Google Gemini API Key'), findsOneWidget);
-      expect(find.text('Hapus Key (Mode Lokal)'), findsOneWidget);
-      expect(find.text('Simpan'), findsOneWidget);
+      expect(find.text('Kang Bandung'), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy_rounded), findsWidgets);
     });
   });
 }

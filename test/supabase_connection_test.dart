@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:projek_akhir/core/config/env_config.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/services/supabase_service.dart';
 
 class _RealHttpOverrides extends HttpOverrides {}

@@ -78,7 +78,7 @@ class SupabaseService {
     }
   }
 
-  /// Upload/Seeding daftar destinasi dummy ke Supabase jika tabel masih kosong
+  /// Upload/Seeding daftar destinasi resmi Bandung ke Supabase jika tabel masih kosong
   Future<void> seedDestinationsIfEmpty(List<Destination> destinations) async {
     final sb = client;
     if (sb == null) return;

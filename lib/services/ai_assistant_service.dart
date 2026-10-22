@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../data/dummy/dummy_destinations.dart';
+import '../data/sources/bandung_destinations.dart';
 import '../models/chat_message.dart';
 import '../models/destination.dart';
 
@@ -24,11 +24,13 @@ class AiAssistantService {
   }
 
   // Primary model and fallback models for Google Gemini
-  static const String _primaryModel = 'gemini-3.8-flash';
+  // Menggunakan model 'gemini-2.0-flash-lite' (versi baru paling hemat limit & kuota)
+  static const String _primaryModel = 'gemini-2.0-flash-lite';
   static const List<String> _candidateModels = [
-    'gemini-3.8-flash',
-    'gemini-flash-latest',
-    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
   ];
 
   // System Prompt strictly focused on BandungHub application, Bandung tourism, culture, and itinerary
@@ -123,7 +125,10 @@ GAYA BAHASA:
   }
 
   // Send message with automatic Gemini API -> Smart Local Fallback
-  Future<ChatMessage> processMessage(String userPrompt) async {
+  Future<ChatMessage> processMessage(
+    String userPrompt, {
+    List<ChatMessage>? history,
+  }) async {
     final cleanPrompt = userPrompt.trim();
     if (cleanPrompt.isEmpty) {
       return ChatMessage(
@@ -140,7 +145,11 @@ GAYA BAHASA:
     // 1. Try Gemini API with the active key
     if (apiKey.isNotEmpty) {
       try {
-        final geminiResponse = await _queryGeminiApi(cleanPrompt, apiKey);
+        final geminiResponse = await _queryGeminiApi(
+          cleanPrompt,
+          apiKey,
+          recentHistory: history,
+        );
         if (geminiResponse != null && geminiResponse.isNotEmpty) {
           final matchedDestinations = _extractMentionedDestinations(
             geminiResponse,
@@ -164,8 +173,12 @@ GAYA BAHASA:
     return _generateLocalHeuristicResponse(cleanPrompt);
   }
 
-  // Query Gemini REST endpoint with model fallback
-  Future<String?> _queryGeminiApi(String prompt, String apiKey) async {
+  // Query Gemini REST endpoint with model fallback and conversation history
+  Future<String?> _queryGeminiApi(
+    String prompt,
+    String apiKey, {
+    List<ChatMessage>? recentHistory,
+  }) async {
     final modelsToTry = [
       _primaryModel,
       ..._candidateModels.where((m) => m != _primaryModel),
@@ -177,23 +190,42 @@ GAYA BAHASA:
           'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
         );
 
+        // Batasi konteks percakapan (maksimal 4 pesan terakhir) agar hemat token dan tidak boros kuota limit
+        final List<Map<String, dynamic>> contents = [];
+        if (recentHistory != null && recentHistory.isNotEmpty) {
+          final contextMessages = recentHistory
+              .where((m) => m.id != 'msg_initial')
+              .toList();
+          final startIdx = contextMessages.length > 4
+              ? contextMessages.length - 4
+              : 0;
+          for (final msg in contextMessages.sublist(startIdx)) {
+            contents.add({
+              'role': msg.isUser ? 'user' : 'model',
+              'parts': [
+                {'text': msg.text},
+              ],
+            });
+          }
+        }
+        // Add the current user message
+        contents.add({
+          'role': 'user',
+          'parts': [
+            {'text': prompt},
+          ],
+        });
+
         final payload = {
           'system_instruction': {
             'parts': [
               {'text': _systemPrompt},
             ],
           },
-          'contents': [
-            {
-              'role': 'user',
-              'parts': [
-                {'text': prompt},
-              ],
-            },
-          ],
+          'contents': contents,
           'generationConfig': {
             'temperature': 0.7,
-            'maxOutputTokens': 1000,
+            'maxOutputTokens': 512,
           },
         };
 
@@ -203,7 +235,7 @@ GAYA BAHASA:
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
             )
-            .timeout(const Duration(seconds: 15));
+            .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -235,12 +267,12 @@ GAYA BAHASA:
     return null;
   }
 
-  // Find destinations from DummyDestinations mentioned in the text
+  // Find destinations from BandungDestinations mentioned in the text
   List<Destination> _extractMentionedDestinations(String text) {
     final lower = text.toLowerCase();
     final matched = <Destination>[];
 
-    for (final dest in DummyDestinations.list) {
+    for (final dest in BandungDestinations.list) {
       if (lower.contains(dest.name.toLowerCase())) {
         matched.add(dest);
       }
@@ -532,7 +564,7 @@ GAYA BAHASA:
 
   void _addDestinationById(List<Destination> list, String id) {
     try {
-      final dest = DummyDestinations.list.firstWhere((d) => d.id == id);
+      final dest = BandungDestinations.list.firstWhere((d) => d.id == id);
       if (!list.contains(dest)) {
         list.add(dest);
       }

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:projek_akhir/core/constants/app_constants.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/models/destination.dart';
 
 void main() {
@@ -15,20 +15,15 @@ void main() {
     });
 
     test(
-      'Initial destination list should contain verified and mock destinations',
+      'Initial destination list should contain real verified Bandung destinations',
       () {
-        final list = DummyDestinations.list;
+        final list = BandungDestinations.list;
         expect(list.isNotEmpty, true);
 
         // Check verified destinations
         final verified = list.where((d) => d.isVerified).toList();
-        final unverified = list.where((d) => !d.isVerified).toList();
-
         expect(verified.isNotEmpty, true);
-        expect(
-          unverified.isNotEmpty,
-          true,
-        ); // Differentiates dummy from verified
+        expect(verified.length, equals(list.length));
 
         // Check destination attributes
         for (final dest in list) {
@@ -75,7 +70,7 @@ void main() {
     );
 
     test('Category filtering isolates proper destinations', () {
-      final alamDestinations = DummyDestinations.list
+      final alamDestinations = BandungDestinations.list
           .where((d) => d.category.toLowerCase() == 'alam')
           .toList();
       expect(alamDestinations.isNotEmpty, true);

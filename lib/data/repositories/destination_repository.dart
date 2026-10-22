@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../dummy/dummy_destinations.dart';
+import '../sources/bandung_destinations.dart';
 import '../../models/destination.dart';
 import '../../services/supabase_service.dart';
 
@@ -18,7 +18,7 @@ class DestinationRepository extends ChangeNotifier {
   factory DestinationRepository() => _instance;
   DestinationRepository._internal();
 
-  final List<Destination> _allDestinations = List.from(DummyDestinations.list);
+  final List<Destination> _allDestinations = List.from(BandungDestinations.list);
   final Set<String> _favoriteIds = {};
 
   List<Destination> get allDestinations => List.unmodifiable(_allDestinations);
@@ -31,7 +31,7 @@ class DestinationRepository extends ChangeNotifier {
         final cloud = await sb.fetchDestinations();
         if (cloud.isNotEmpty) {
           final Map<String, Destination> merged = {
-            for (final d in DummyDestinations.list) d.id: d,
+            for (final d in BandungDestinations.list) d.id: d,
           };
           for (final c in cloud) {
             merged[c.id] = c;

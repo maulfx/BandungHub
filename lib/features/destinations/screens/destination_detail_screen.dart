@@ -443,11 +443,11 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.warning,
+                                      color: AppColors.info,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Text(
-                                      'Data Simulasi Dummy',
+                                      'Rekomendasi Komunitas',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,

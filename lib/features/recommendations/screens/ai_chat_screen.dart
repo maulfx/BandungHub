@@ -25,7 +25,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   final List<ChatMessage> _messages = [];
   bool _isTyping = false;
-  bool _hasGeminiKey = false;
 
   final List<String> _quickPrompts = [
     '🌲 Wisata alam sejuk di Lembang',
@@ -39,7 +38,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   @override
   void initState() {
     super.initState();
-    _checkApiKeyStatus();
     _initChatHistory();
   }
 
@@ -72,12 +70,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     super.dispose();
   }
 
-  Future<void> _checkApiKeyStatus() async {
-    final effectiveKey = await _aiService.getEffectiveApiKey();
-    if (mounted) {
-      setState(() => _hasGeminiKey = effectiveKey.isNotEmpty);
-    }
-  }
+
 
   void _addInitialGreeting() {
     _messages.add(
@@ -122,7 +115,10 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
     await _aiService.saveChatHistory(_messages);
 
-    final response = await _aiService.processMessage(query);
+    final response = await _aiService.processMessage(
+      query,
+      history: List.from(_messages),
+    );
 
     if (mounted) {
       setState(() {
@@ -134,103 +130,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  void _openApiKeyDialog() {
-    final apiKeyController = TextEditingController();
-    final messenger = ScaffoldMessenger.of(context);
-
-    _aiService.getApiKey().then((currentKey) {
-      if (currentKey != null) {
-        apiKeyController.text = currentKey;
-      }
-    });
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.key_rounded, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text('Pengaturan Gemini API'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Masukkan Google Gemini API Key Anda untuk menghubungkan ke model cloud langsung. Jika dikosongkan, asisten akan menggunakan Mesin Rekomendasi Cerdas Lokal (Offline Ready).',
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: AppColors.textSecondaryLight,
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: apiKeyController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Google Gemini API Key',
-                  hintText: 'AIzaSy...',
-                  prefixIcon: const Icon(Icons.vpn_key_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(dialogContext);
-                await _aiService.clearApiKey();
-                if (mounted) {
-                  setState(() => _hasGeminiKey = false);
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'API Key dihapus. Beralih ke Mode Cerdas Lokal.',
-                      ),
-                      backgroundColor: AppColors.secondary,
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                'Hapus Key (Mode Lokal)',
-                style: TextStyle(color: AppColors.error),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final key = apiKeyController.text.trim();
-                Navigator.pop(dialogContext);
-                if (key.isNotEmpty) {
-                  await _aiService.saveApiKey(key);
-                  if (mounted) {
-                    setState(() => _hasGeminiKey = true);
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Gemini API Key berhasil disimpan!'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void _confirmClearChat() {
     showDialog(
@@ -335,18 +234,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: _hasGeminiKey
-                              ? AppColors.success
-                              : AppColors.secondary,
+                          color: AppColors.success,
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 5),
+                      SizedBox(width: 5),
                       Text(
-                        _hasGeminiKey
-                            ? 'Gemini 1.5 Cloud'
-                            : 'Smart Heuristic Engine',
-                        style: const TextStyle(
+                        'Pemandu Wisata Online',
+                        style: TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondaryLight,
                           fontWeight: FontWeight.w500,
@@ -360,16 +255,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.key_rounded,
-              color: _hasGeminiKey
-                  ? AppColors.primary
-                  : AppColors.textSecondaryLight,
-            ),
-            tooltip: 'Pengaturan API Key',
-            onPressed: _openApiKeyDialog,
-          ),
           IconButton(
             icon: const Icon(
               Icons.delete_sweep_outlined,

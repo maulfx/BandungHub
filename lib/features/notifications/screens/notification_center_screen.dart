@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../data/dummy/dummy_destinations.dart';
+import '../../../data/sources/bandung_destinations.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../models/app_notification.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -102,7 +102,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        items: DummyDestinations.list.map((dest) {
+                        items: BandungDestinations.list.map((dest) {
                           return DropdownMenuItem(
                             value: dest.id,
                             child: Text(
@@ -115,7 +115,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                           setSheetState(() {
                             selectedDestinationId = val;
                             if (val != null) {
-                              final dest = DummyDestinations.list.firstWhere(
+                              final dest = BandungDestinations.list.firstWhere(
                                 (d) => d.id == val,
                               );
                               titleController.text =
@@ -306,7 +306,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
     if (notif.payload != null && notif.payload!['destinationId'] != null) {
       final destId = notif.payload!['destinationId'] as String;
-      final match = DummyDestinations.list.where((d) => d.id == destId);
+      final match = BandungDestinations.list.where((d) => d.id == destId);
       if (match.isNotEmpty) {
         Navigator.push(
           context,

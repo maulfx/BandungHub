@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../../data/dummy/dummy_destinations.dart';
+import '../../../data/sources/bandung_destinations.dart';
 import '../../../data/repositories/itinerary_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../models/app_notification.dart';
@@ -38,7 +38,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         String searchQuery = '';
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final filtered = DummyDestinations.list.where((d) {
+            final filtered = BandungDestinations.list.where((d) {
               return searchQuery.isEmpty ||
                   d.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
                   d.category.toLowerCase().contains(searchQuery.toLowerCase());

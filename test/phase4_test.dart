@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/features/recommendations/screens/preference_form_screen.dart';
 import 'package:projek_akhir/features/recommendations/screens/recommendation_results_screen.dart';
 import 'package:projek_akhir/models/travel_preference.dart';
@@ -8,7 +8,7 @@ import 'package:projek_akhir/services/recommendation_engine.dart';
 
 void main() {
   group('Phase 4 - Recommendation Engine Unit Tests', () {
-    final destinations = DummyDestinations.list;
+    final destinations = BandungDestinations.list;
 
     test('Engine calculates scores, reasons, and sorts results descending', () {
       const pref = TravelPreference(

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/sync_queue_item.dart';
 import '../../services/network_connectivity_service.dart';
-import '../dummy/dummy_destinations.dart';
+import '../sources/bandung_destinations.dart';
 import 'itinerary_repository.dart';
 import 'review_repository.dart';
 
@@ -293,7 +293,7 @@ class OfflineSyncRepository extends ChangeNotifier {
 
   /// Get cache storage statistics for BandungHub
   Map<String, dynamic> getCacheStats() {
-    final totalDestinations = DummyDestinations.list.length;
+    final totalDestinations = BandungDestinations.list.length;
     final totalReviews = ReviewRepository().reviews.length;
     final totalItineraries = ItineraryRepository().itineraries.length;
 

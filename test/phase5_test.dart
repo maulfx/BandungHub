@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/itinerary_repository.dart';
 import 'package:projek_akhir/features/itinerary/screens/create_itinerary_screen.dart';
 import 'package:projek_akhir/features/itinerary/screens/itinerary_screen.dart';
@@ -129,7 +129,7 @@ void main() {
       expect(repo.getItineraryById(created.id), isNotNull);
 
       // Add destination
-      final sampleDest = DummyDestinations.list.first;
+      final sampleDest = BandungDestinations.list.first;
       await repo.addDestinationToItinerary(
         itineraryId: created.id,
         destination: sampleDest,

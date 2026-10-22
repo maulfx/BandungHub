@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/notification_repository.dart';
 import 'package:projek_akhir/features/destinations/screens/destination_detail_screen.dart';
 import 'package:projek_akhir/features/notifications/screens/notification_center_screen.dart';
@@ -262,7 +262,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final dest = DummyDestinations.list.first;
+      final dest = BandungDestinations.list.first;
 
       await tester.pumpWidget(
         MaterialApp(

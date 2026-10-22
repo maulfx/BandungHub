@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/dummy/dummy_destinations.dart';
+import '../../../data/sources/bandung_destinations.dart';
 import '../../../models/destination.dart';
 import '../../../shared/widgets/destination_card.dart';
 import '../../../shared/widgets/empty_view.dart';
@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Destination> get _filteredDestinations {
-    return DummyDestinations.list.where((item) {
+    return BandungDestinations.list.where((item) {
       final matchesCategory =
           _selectedCategory == 'Semua' ||
           item.category.toLowerCase() == _selectedCategory.toLowerCase();
@@ -661,9 +661,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ListView.builder(
                         padding: const EdgeInsets.only(left: 20),
                         scrollDirection: Axis.horizontal,
-                        itemCount: DummyDestinations.list.take(5).length,
+                        itemCount: BandungDestinations.list.take(5).length,
                         itemBuilder: (context, index) {
-                          final item = DummyDestinations.list[index];
+                          final item = BandungDestinations.list[index];
                           return DestinationCard(
                             destination: item,
                             onTap: () => _showDestinationDetails(item),

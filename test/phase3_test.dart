@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/destination_repository.dart';
 import 'package:projek_akhir/features/destinations/screens/destination_detail_screen.dart';
 import 'package:projek_akhir/features/destinations/screens/explore_screen.dart';
@@ -99,7 +99,7 @@ void main() {
     });
 
     test('Favorite toggle works and updates filter', () {
-      final sampleId = DummyDestinations.list.first.id;
+      final sampleId = BandungDestinations.list.first.id;
 
       // Initially not favorite
       if (repo.isFavorite(sampleId)) {
@@ -132,7 +132,7 @@ void main() {
           tester.view.resetDevicePixelRatio();
         });
 
-        final destination = DummyDestinations.list.first; // Gedung Sate
+        final destination = BandungDestinations.list.first; // Gedung Sate
 
         await tester.pumpWidget(
           MaterialApp(home: DestinationDetailScreen(destination: destination)),

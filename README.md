@@ -63,7 +63,7 @@ lib/
 │   ├── constants/            # Konstanta aplikasi (nama, versi, tagar)
 │   └── theme/                # Desain sistem, AppColors (Teal/Amber), AppTheme (Light & Dark)
 ├── data/
-│   ├── dummy/                # Dataset 13 destinasi Bandung terverifikasi
+│   ├── sources/              # Dataset 38 destinasi resmi Bandung Google Maps 2026
 │   └── repositories/         # State managers & repositories
 │       ├── auth_repository.dart
 │       ├── destination_repository.dart

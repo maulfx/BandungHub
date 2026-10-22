@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:projek_akhir/app.dart';
 import 'package:projek_akhir/core/theme/app_colors.dart';
 import 'package:projek_akhir/core/theme/app_theme.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/theme_repository.dart';
 import 'package:projek_akhir/features/destinations/screens/explore_screen.dart';
 import 'package:projek_akhir/features/profile/screens/profile_screen.dart';
@@ -214,7 +214,7 @@ void main() {
     testWidgets(
       'DestinationCard provides explicit Semantics for screen readers',
       (tester) async {
-        final destination = DummyDestinations.list.first;
+        final destination = BandungDestinations.list.first;
 
         await tester.pumpWidget(
           MaterialApp(

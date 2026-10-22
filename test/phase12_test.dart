@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/review_repository.dart';
 import 'package:projek_akhir/features/destinations/widgets/destination_reviews_section.dart';
 import 'package:projek_akhir/models/destination_review.dart';
@@ -149,7 +149,7 @@ void main() {
 
     testWidgets('DestinationReviewsSection renders rating header, score, and write button',
         (WidgetTester tester) async {
-      final destination = DummyDestinations.list.first;
+      final destination = BandungDestinations.list.first;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -178,7 +178,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final destination = DummyDestinations.list.first;
+      final destination = BandungDestinations.list.first;
 
       await tester.pumpWidget(
         MaterialApp(

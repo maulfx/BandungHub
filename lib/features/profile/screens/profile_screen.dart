@@ -1062,7 +1062,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: _buildAdminStatTile(
                   icon: Icons.place_rounded,
                   label: 'Destinasi',
-                  value: '13 Wisata',
+                  value: '38 Wisata',
                   color: AppColors.primary,
                 ),
               ),
@@ -1070,7 +1070,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _buildAdminStatTile(
                   icon: Icons.auto_awesome_rounded,
-                  label: 'Gemini AI',
+                  label: 'Asisten AI',
                   value: 'Online',
                   color: const Color(0xFF2E7D32),
                 ),

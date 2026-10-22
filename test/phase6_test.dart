@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/features/map/screens/destination_map_screen.dart';
 import 'package:projek_akhir/services/location_service.dart';
 import 'package:projek_akhir/services/map_service.dart';
@@ -46,11 +46,11 @@ void main() {
         const bandungCenter = LocationService.defaultBandungCenter;
         final nearestList = locationService.getNearestDestinations(
           userLocation: bandungCenter,
-          destinations: DummyDestinations.list,
+          destinations: BandungDestinations.list,
         );
 
         expect(nearestList.isNotEmpty, isTrue);
-        expect(nearestList.length, DummyDestinations.list.length);
+        expect(nearestList.length, BandungDestinations.list.length);
 
         // Verify ascending order
         for (int i = 0; i < nearestList.length - 1; i++) {
@@ -129,7 +129,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
-      final destination = DummyDestinations.list.first;
+      final destination = BandungDestinations.list.first;
 
       await tester.pumpWidget(
         MaterialApp(

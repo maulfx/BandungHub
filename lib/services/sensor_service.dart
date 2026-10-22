@@ -54,10 +54,11 @@ class SensorService {
   double _lastAccelZ = 9.8;
   double _lastMagX = 0;
   double _lastMagY = 0;
-  double _lastMagZ = 0;
   double _currentHeading = 0;
 
   double _currentTilt = 0.0;
+  // Smoothed gyro velocity (EMA) for game tilt
+  double _smoothedGyroRate = 0.0;
   bool _isListening = false;
   bool get isListening => _isListening;
 
@@ -67,17 +68,20 @@ class SensorService {
     _isListening = true;
 
     try {
-      // 1. Gyroscope for rapid game tilt dynamics (shaking & twisting)
+      // 1. Gyroscope for rapid game tilt dynamics - smoothed via EMA
       _gyroSub = gyroscopeEventStream(
         samplingPeriod: SensorInterval.gameInterval,
       ).listen(
         (event) {
-          // In portrait: event.z is rotation around phone screen, event.y is roll rate
-          // Tilting/shaking left gives angular velocity
-          final gyroRate = (-event.y * 0.5 - event.z * 0.35).clamp(-1.0, 1.0);
-          if (gyroRate.abs() > 0.05) {
+          // In portrait: event.y = roll rate, event.z = screen rotation
+          final rawRate = (-event.y * 0.4 - event.z * 0.25).clamp(-1.0, 1.0);
+          // EMA smoothing: alpha=0.2 → very smooth, slow to react
+          _smoothedGyroRate = _smoothedGyroRate * 0.8 + rawRate * 0.2;
+          // Dead zone threshold to ignore micro-jitter
+          if (_smoothedGyroRate.abs() > 0.08) {
             _currentTilt =
-                (_currentTilt * 0.65 + gyroRate * 0.35).clamp(-1.0, 1.0);
+                (_currentTilt * 0.75 + _smoothedGyroRate * 0.25)
+                    .clamp(-1.0, 1.0);
             _gameTiltController.add(_currentTilt);
           }
         },
@@ -99,13 +103,14 @@ class SensorService {
           _lastAccelY = event.y;
           _lastAccelZ = event.z;
 
-          // Game steering calculation:
-          // In portrait: tilting phone left makes event.x positive; right makes event.x negative
-          // Scaling by 3.2 makes a natural 20-degree tilt comfortably steer the character
-          final rawTilt = (-event.x / 3.2).clamp(-1.0, 1.0);
-          final filteredTilt = (rawTilt.abs() < 0.03) ? 0.0 : rawTilt;
+          // Game steering: tilt left → positive, right → negative
+          // Scaling by 3.5 for comfortable 20-degree tilt steering
+          final rawTilt = (-event.x / 3.5).clamp(-1.0, 1.0);
+          // Dead zone + stronger EMA smoothing for accelerometer
+          final filteredTilt = (rawTilt.abs() < 0.06) ? 0.0 : rawTilt;
+          // EMA: alpha=0.35 → smooth but responsive for steering
           _currentTilt =
-              (_currentTilt * 0.4 + filteredTilt * 0.6).clamp(-1.0, 1.0);
+              (_currentTilt * 0.65 + filteredTilt * 0.35).clamp(-1.0, 1.0);
           _gameTiltController.add(_currentTilt);
 
           _computeOrientation();
@@ -126,7 +131,6 @@ class SensorService {
         (event) {
           _lastMagX = event.x;
           _lastMagY = event.y;
-          _lastMagZ = event.z;
 
           _computeOrientation();
         },
@@ -183,10 +187,10 @@ class SensorService {
       if (heading < 0) heading += 360;
     }
 
-    // Low-pass filter for smooth compass dial rotation
+    // Low-pass filter for smooth compass dial rotation (alpha=0.10 → very smooth)
     final diff = heading - _currentHeading;
     final shortestDiff = ((diff + 180) % 360) - 180;
-    _currentHeading = (_currentHeading + shortestDiff * 0.15) % 360;
+    _currentHeading = (_currentHeading + shortestDiff * 0.10) % 360;
     if (_currentHeading < 0) _currentHeading += 360;
 
     final cardinal = getCardinalDirection(_currentHeading);

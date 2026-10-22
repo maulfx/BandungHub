@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:projek_akhir/data/dummy/dummy_destinations.dart';
+import 'package:projek_akhir/data/sources/bandung_destinations.dart';
 import 'package:projek_akhir/data/repositories/offline_sync_repository.dart';
 import 'package:projek_akhir/data/repositories/review_repository.dart';
 import 'package:projek_akhir/features/offline/screens/offline_sync_screen.dart';
@@ -227,7 +227,7 @@ void main() {
 
     test('getCacheStats and clearTemporaryCache return valid figures', () async {
       final stats = repo.getCacheStats();
-      expect(stats['destinationsCount'], DummyDestinations.list.length);
+      expect(stats['destinationsCount'], BandungDestinations.list.length);
       expect(stats['totalBytes'], isNonZero);
       expect(stats['formattedSize'].toString().contains('MB'), true);
 
