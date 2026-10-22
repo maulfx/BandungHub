@@ -528,12 +528,83 @@ class _ExploreScreenState extends State<ExploreScreen> {
               // Destination list or grid
               Expanded(
                 child: destinations.isEmpty
-                    ? EmptyView(
-                        title: 'Destinasi Tidak Ditemukan',
-                        message: 'Tidak ada destinasi yang cocok dengan kriteria pencarian dan filter Anda.',
-                        buttonText: 'Reset Filter',
-                        onButtonPressed: _resetFilters,
-                      )
+                    ? (_searchQuery.isNotEmpty
+                        ? Center(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.travel_explore_rounded,
+                                      size: 56,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Belum Ada di Katalog Utama?',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.getTextPrimary(context),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tenang! Anda bisa mencari "$_searchQuery" secara bebas di Peta Live Bandung untuk menemukan lokasi rill dan arah kompasnya.',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondaryLight,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const DestinationMapScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.map_rounded),
+                                    label: const Text(
+                                      'Cari Bebas di Peta Live Bandung',
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextButton(
+                                    onPressed: _resetFilters,
+                                    child: const Text('Reset Pencarian'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : EmptyView(
+                            title: 'Destinasi Tidak Ditemukan',
+                            message:
+                                'Tidak ada destinasi yang cocok dengan kriteria pencarian dan filter Anda.',
+                            buttonText: 'Reset Filter',
+                            onButtonPressed: _resetFilters,
+                          ))
                     : _isGridView
                     ? LayoutBuilder(
                         builder: (context, constraints) {

@@ -16,12 +16,9 @@ class AiAssistantService {
   static const String _keyGeminiApiKey = 'bandunghub_gemini_api_key';
   static const String _keyChatHistory = 'bandunghub_ai_chat_history';
 
-  // Obfuscated default key to avoid plain secret scanner triggers on git push
-  static String get _defaultApiKey {
-    const encoded =
-        'QVEuQWI4Uk42SlRjMktGNHNwZXBJRVIxa2RtOWU1WENJakRHQ0ZRcV9WMjR0OTE5ek1WMWc=';
-    return utf8.decode(base64Decode(encoded));
-  }
+  // Default API Key
+  static const String _defaultApiKey =
+      'AQ.Ab8RN6JTc2KF4spepIER1kdm9e5XCIjDGCFQq_V24t919zMV1g';
 
   // Primary model and fallback models for Google Gemini
   // Menggunakan model 'gemini-2.0-flash-lite' (versi baru paling hemat limit & kuota)
@@ -84,7 +81,7 @@ GAYA BAHASA:
 
   Future<bool> hasApiKey() async {
     final key = await getApiKey();
-    return key != null && key.isNotEmpty;
+    return key != null && key.trim().isNotEmpty;
   }
 
   // Load persisted chat history
@@ -169,7 +166,7 @@ GAYA BAHASA:
       }
     }
 
-    // 2. Intelligent Local Heuristic Engine Fallback (100% reliable offline/fallback)
+    // 2. Intelligent Local Conversational Engine Fallback (100% reliable offline)
     return _generateLocalHeuristicResponse(cleanPrompt);
   }
 
@@ -282,13 +279,123 @@ GAYA BAHASA:
 
   // Smart Local Rule-Based NLP Heuristic Engine
   ChatMessage _generateLocalHeuristicResponse(String query) {
-    final lower = query.toLowerCase();
+    final lower = query.toLowerCase().trim();
     final buffer = StringBuffer();
     final List<Destination> matchedDestinations = [];
 
-    buffer.writeln(
-      'Sampurasun! Wilujeng sumping di layanan asisten cerdas BandungHub! 🙏',
-    );
+    // 0. Greeting & Casual Inquiry Intent (e.g. "aku mau tanya", "halo", "bisa bantu")
+    final hasSpecificTopic = lower.contains('kuliner') ||
+        lower.contains('makan') ||
+        lower.contains('alam') ||
+        lower.contains('sejuk') ||
+        lower.contains('itinerary') ||
+        lower.contains('rencana') ||
+        lower.contains('jadwal') ||
+        lower.contains('sejarah') ||
+        lower.contains('museum') ||
+        lower.contains('murah') ||
+        lower.contains('budget') ||
+        lower.contains('keluarga') ||
+        lower.contains('anak');
+
+    if (!hasSpecificTopic &&
+        (lower.contains('mau tanya') ||
+            lower.contains('tanya dong') ||
+            lower.contains('bisa tanya') ||
+            lower.contains('ingin tanya') ||
+            lower.contains('halo') ||
+            lower.contains('hai') ||
+            lower.contains('hei') ||
+            lower.contains('sampurasun') ||
+            lower.contains('selamat') ||
+            lower.contains('pagi') ||
+            lower.contains('siang') ||
+            lower.contains('sore') ||
+            lower.contains('malam') ||
+            lower.contains('permisi') ||
+            lower.contains('bisa bantu') ||
+            lower.contains('tolong') ||
+            lower.contains('assalamu') ||
+            lower == 'tes' ||
+            lower == 'test' ||
+            lower == 'kang')) {
+      buffer.writeln(
+        'Sampurasun wargi! Mangga atuh, mau tanya apa tentang Bandung? 😊 Kang Bandung siap bantu!',
+      );
+      buffer.writeln();
+      buffer.writeln('Wargi bisa tanyakan hal-hal menarik seperti:');
+      buffer.writeln(
+        '• **Wisata Alam Sejuk**: Kawah Putih, Tangkuban Parahu, Orchid Forest, atau perkebunan teh.',
+      );
+      buffer.writeln(
+        '• **Kuliner Legendaris**: Batagor, Seblak, Mie Kocok, Warung Nasi Bu Imas, atau kafe estetik.',
+      );
+      buffer.writeln(
+        '• **Rencana Liburan (Itinerary)**: Susunan jadwal 1 hari atau 2 hari di Lembang / Ciwidey.',
+      );
+      buffer.writeln(
+        '• **Peta & Arah**: Lokasi rute dan kompas arah ke tempat wisata di Bandung.',
+      );
+      buffer.writeln();
+      buffer.writeln(
+        'Mangga ceritakan rencana liburan wargi, atau langsung ketik destinasi yang ingin dicari!',
+      );
+
+      return ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        text: buffer.toString(),
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    // 0b. Identity / Who are you
+    if (lower.contains('siapa kamu') ||
+        lower.contains('kamu siapa') ||
+        lower.contains('siapakah kamu') ||
+        lower.contains('nama kamu')) {
+      buffer.writeln(
+        'Sampurasun wargi! Saya **Kang Bandung**, asisten pemandu wisata cerdas resmi aplikasi BandungHub! 🙏',
+      );
+      buffer.writeln();
+      buffer.writeln(
+        'Tugas saya menemani wargi merencanakan liburan terbaik di Bandung Raya—mulai dari mencari destinasi alam pegunungan, kuliner Sunda legendaris, rute navigasi peta, hingga menyusun jadwal itinerary harian.',
+      );
+      buffer.writeln();
+      buffer.writeln('Ada yang bisa Kang Bandung bantu hari ini?');
+
+      return ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        text: buffer.toString(),
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    // 0c. Thank you Intent
+    if (lower.contains('makasih') ||
+        lower.contains('terima kasih') ||
+        lower.contains('hatur nuhun') ||
+        lower.contains('thanks') ||
+        lower.contains('matur nuwun')) {
+      buffer.writeln(
+        'Sampurasun wargi! Sami-sami! Hatur nuhun pisan parantos nganggo BandungHub. 🙏✨',
+      );
+      buffer.writeln();
+      buffer.writeln(
+        'Semoga perjalanan dan liburan wargi di Bandung menyenangkan, lancar, dan penuh kenangan indah. Wilujeng jalan-jalan!',
+      );
+
+      return ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        text: buffer.toString(),
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    // Default warm greeting prefix for topic responses
+    buffer.writeln('Sampurasun wargi! 🙏');
     buffer.writeln();
 
     // 1. Itinerary Planning Intent
@@ -524,33 +631,45 @@ GAYA BAHASA:
       _addDestinationById(matchedDestinations, 'dest_05'); // Saung Angklung
       _addDestinationById(matchedDestinations, 'dest_12'); // Trans Studio
     }
-    // 7. General Friendly Bandung Recommendation
+    // 7. General Friendly Fallback Response
     else {
-      buffer.writeln(
-        'Senang sekali bisa membantu rencana perjalanan Anda ke Bandung! Berdasarkan rekomendasi terpopuler wisatawan BandungHub, berikut destinasi unggulan kami:',
-      );
-      buffer.writeln();
-      buffer.writeln(
-        '• **Tangkuban Parahu & Kawah Putih** untuk pesona pemandangan alam vulkanik.',
-      );
-      buffer.writeln(
-        '• **Floating Market Lembang** untuk suasana santai keluarga dan kuliner terapung.',
-      );
-      buffer.writeln(
-        '• **Gedung Sate & Jalan Braga** untuk wisata arsitektur bersejarah.',
-      );
-      buffer.writeln(
-        '• **Kawasan Kuliner Punclut** untuk santap malam berpanorama lampu kota.',
-      );
-      buffer.writeln();
-      buffer.writeln(
-        'Silakan tanyakan hal spesifik, seperti: *"rekomendasi wisata alam sejuk"*, *"kuliner malam ramah kantong"*, atau *"itinerary 2 hari di Lembang"*!',
-      );
+      // Check if any destination name matches the user's query
+      final specificMatches = BandungDestinations.list
+          .where((d) => lower.contains(d.name.toLowerCase()))
+          .toList();
 
-      _addDestinationById(matchedDestinations, 'dest_03'); // Tangkuban
-      _addDestinationById(matchedDestinations, 'dest_02'); // Kawah Putih
-      _addDestinationById(matchedDestinations, 'dest_06'); // Floating Market
-      _addDestinationById(matchedDestinations, 'dest_01'); // Gedung Sate
+      if (specificMatches.isNotEmpty) {
+        final dest = specificMatches.first;
+        matchedDestinations.add(dest);
+        buffer.writeln('Berikut informasi tentang **${dest.name}**:');
+        buffer.writeln();
+        buffer.writeln('📍 **Lokasi**: ${dest.address}');
+        buffer.writeln('🏷️ **Kategori**: ${dest.category}');
+        buffer.writeln(
+          '⭐ **Rating**: ${dest.rating} / 5.0 (${dest.reviewCount} ulasan)',
+        );
+        buffer.writeln(
+          '💵 **Estimasi Tiket**: ${dest.estimatedPrice <= 0 ? 'Gratis' : 'Rp ${dest.estimatedPrice.toInt()}'}',
+        );
+        buffer.writeln();
+        buffer.writeln(dest.description);
+        buffer.writeln();
+        buffer.writeln(
+          '💡 Ingin melihat rutenya di peta atau menambahkannya ke rencana liburan?',
+        );
+      } else {
+        buffer.writeln(
+          'Punten wargi, Kang Bandung siap membantu seputar destinasi wisata, kuliner legendaris, dan rencana liburan di Bandung Raya. 😊',
+        );
+        buffer.writeln();
+        buffer.writeln(
+          'Agar jawabannya pas dengan yang wargi inginkan, coba tanyakan hal seperti:',
+        );
+        buffer.writeln('• *"Rekomendasi tempat sejuk di Lembang atau Ciwidey"*');
+        buffer.writeln('• *"Kuliner malam legendaris khas Bandung"*');
+        buffer.writeln('• *"Buatkan rencana liburan 2 hari di Bandung"*');
+        buffer.writeln('• *"Tempat wisata yang cocok untuk keluarga dan anak"*');
+      }
     }
 
     return ChatMessage(

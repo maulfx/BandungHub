@@ -43,6 +43,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   Future<void> _initChatHistory() async {
     final history = await _aiService.loadChatHistory();
+
     if (mounted) {
       setState(() {
         if (history.isNotEmpty) {
@@ -233,13 +234,13 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       Container(
                         width: 7,
                         height: 7,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppColors.success,
                           shape: BoxShape.circle,
                         ),
                       ),
-                      SizedBox(width: 5),
-                      Text(
+                      const SizedBox(width: 5),
+                      const Text(
                         'Pemandu Wisata Online',
                         style: TextStyle(
                           fontSize: 10,

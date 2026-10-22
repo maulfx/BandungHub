@@ -9,6 +9,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../models/destination.dart';
+import '../../../services/bandung_places_search_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/map_service.dart';
 import '../../../services/sensor_service.dart';
@@ -29,6 +30,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   final LocationService _locationService = LocationService();
   final DestinationRepository _repository = DestinationRepository();
   final SensorService _sensorService = SensorService();
+  final BandungPlacesSearchService _placesService = BandungPlacesSearchService();
 
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
@@ -153,25 +155,48 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       return;
     }
 
+    // 1. Instantly match curated local destinations in memory
+    final localMatches = _repository.allDestinations.where((d) {
+      final queryLower = q.toLowerCase();
+      return d.name.toLowerCase().contains(queryLower) ||
+          d.address.toLowerCase().contains(queryLower) ||
+          d.category.toLowerCase().contains(queryLower) ||
+          d.tags.any((t) => t.toLowerCase().contains(queryLower));
+    }).take(8).toList();
+
     setState(() {
+      _searchResults = localMatches;
       _isSearching = true;
       _showSearchResults = true;
     });
 
-    _debounceTimer = Timer(const Duration(milliseconds: 250), () {
-      final localMatches = _repository.allDestinations.where((d) {
-        final queryLower = q.toLowerCase();
-        return d.name.toLowerCase().contains(queryLower) ||
-            d.address.toLowerCase().contains(queryLower) ||
-            d.category.toLowerCase().contains(queryLower) ||
-            d.tags.any((t) => t.toLowerCase().contains(queryLower));
-      }).take(8).toList();
+    // 2. Debounced live OpenStreetMap search strictly inside Bandung Raya
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        final liveMatches = await _placesService.searchPlaces(q);
 
-      if (mounted) {
-        setState(() {
-          _searchResults = localMatches;
-          _isSearching = false;
-        });
+        if (mounted && _searchController.text.trim() == q) {
+          final combined = [...localMatches];
+
+          for (final place in liveMatches) {
+            final alreadyPresent = combined.any((m) =>
+                m.id == place.id ||
+                m.name.toLowerCase().trim() == place.name.toLowerCase().trim());
+
+            if (!alreadyPresent) {
+              combined.add(place);
+            }
+          }
+
+          setState(() {
+            _searchResults = combined;
+            _isSearching = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isSearching = false);
+        }
       }
     });
   }
@@ -597,6 +622,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                       separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = _searchResults[index];
+                        final isLivePlace = item.id.startsWith('osm_');
+
                         return ListTile(
                           dense: true,
                           leading: CircleAvatar(
@@ -609,14 +636,40 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                               color: AppColors.getCategoryColor(item.category),
                             ),
                           ),
-                          title: Text(
-                            item.name,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isLivePlace)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Peta Live',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           subtitle: Text(
                             item.address,
@@ -635,6 +688,47 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                           onTap: () => _selectSearchedDestination(item),
                         );
                       },
+                    ),
+                  )
+                else if (_showSearchResults && _searchResults.isEmpty && !_isSearching)
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.getCardColor(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.getBorderColor(context),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.location_off_rounded,
+                          size: 16,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Tidak ditemukan tempat "${_searchController.text.trim()}" di wilayah Bandung.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
