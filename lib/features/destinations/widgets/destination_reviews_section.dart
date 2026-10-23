@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../../data/repositories/review_repository.dart';
 import '../../../models/destination.dart';
 import '../../../models/sync_queue_item.dart';
 import '../../../services/network_connectivity_service.dart';
+import '../../../services/review_blockchain_service.dart';
 
 class DestinationReviewsSection extends StatefulWidget {
   final Destination destination;
@@ -352,6 +354,436 @@ class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
     );
   }
 
+  void _openBlockDetailDialog(BuildContext context, String reviewId) {
+    final block = ReviewBlockchainService().getBlockForReview(reviewId);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        if (block == null) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.shield_outlined, color: Colors.teal),
+                SizedBox(width: 8),
+                Text('Status Blockchain', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            content: const Text(
+              'Blok untuk ulasan ini sedang dalam proses antrean penambangan (mining) atau belum disinkronkan.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Tutup'),
+              ),
+            ],
+          );
+        }
+
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.verified_user_rounded, color: Colors.teal, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Blok #${block.index} Terverifikasi',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const Text(
+                              'Review Blockchain Ledger',
+                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: Colors.teal, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Integritas data ulasan tervalidasi secara kriptografis & bebas manipulasi.',
+                            style: TextStyle(fontSize: 11.5, color: Colors.teal.shade900, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildDetailRow('Pengulas', block.userName),
+                  _buildDetailRow('Rating', '${block.rating} ★'),
+                  _buildDetailRow('Waktu Pencatatan', DateFormat('d MMMM yyyy HH:mm:ss', 'id_ID').format(block.timestamp)),
+                  _buildDetailRow('Destinasi ID', block.destinationId),
+                  const SizedBox(height: 10),
+                  const Text('Current Block Hash (SHA-256):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  _buildHashSnippet(context, block.hash),
+                  const SizedBox(height: 10),
+                  const Text('Previous Block Hash:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  _buildHashSnippet(context, block.previousHash),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Tutup Verifikasi'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHashSnippet(BuildContext context, String hash) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              hash,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 10),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            tooltip: 'Salin Hash',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: hash));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Hash SHA-256 berhasil disalin!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openAuditBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return ListenableBuilder(
+          listenable: ReviewBlockchainService(),
+          builder: (context, _) {
+            final blockchain = ReviewBlockchainService();
+            final audit = blockchain.auditChain();
+            final isValid = audit['isValid'] as bool? ?? false;
+            final errorMsg = audit['errorMessage'] as String?;
+            final chain = blockchain.chain;
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isValid ? Colors.teal : Colors.red).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          isValid ? Icons.shield_rounded : Icons.gpp_bad_rounded,
+                          color: isValid ? Colors.teal : Colors.red,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Audit Integritas Review Blockchain',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Text(
+                              'Ledger Konsensus ${chain.length} Blok Terverifikasi',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Status Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: (isValid ? Colors.teal : Colors.red).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (isValid ? Colors.teal : Colors.red).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isValid ? Icons.verified_rounded : Icons.warning_rounded,
+                          color: isValid ? Colors.teal : Colors.red,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isValid
+                                    ? 'Status Rantai: 100% Valid & Otentik'
+                                    : 'PERINGATAN: Integritas Rantai Rusak!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isValid ? Colors.teal.shade800 : Colors.red.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isValid
+                                    ? 'Seluruh hash SHA-256 dan previous hash tersambung sempurna tanpa pemalsuan.'
+                                    : (errorMsg ?? 'Manipulasi data ulasan terdeteksi.'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isValid ? Colors.teal.shade900 : Colors.red.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Demonstration Control Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: isValid
+                              ? () {
+                                  blockchain.simulateTamper(1);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Simulasi manipulasi diterapkan pada Blok #1! Perhatikan deteksi audit.'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
+                              : null,
+                          icon: const Icon(Icons.bug_report_outlined, size: 14),
+                          label: const Text('Simulasi Serangan', style: TextStyle(fontSize: 11)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange.shade800,
+                            side: BorderSide(color: Colors.orange.shade300),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: !isValid
+                              ? () async {
+                                  await blockchain.restoreChain();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Rantai blockchain berhasil dipulihkan ke data asli!'),
+                                        backgroundColor: Colors.teal,
+                                      ),
+                                    );
+                                  }
+                                }
+                              : null,
+                          icon: const Icon(Icons.refresh_rounded, size: 14),
+                          label: const Text('Pulihkan Data Asli', style: TextStyle(fontSize: 11)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+                  const Text('Daftar Rantai Blok (Block Ledger):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+
+                  // Blocks Scrollable List
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: chain.length,
+                      separatorBuilder: (context, index) => Center(
+                        child: Icon(Icons.link_rounded, size: 16, color: Colors.teal.shade300),
+                      ),
+                      itemBuilder: (context, index) {
+                        final b = chain[index];
+                        final isGenesis = b.index == 0;
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.getCardColor(context),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isGenesis ? Colors.amber.shade400 : AppColors.getBorderColor(context),
+                              width: isGenesis ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isGenesis ? Icons.star_rounded : Icons.layers_rounded,
+                                        size: 16,
+                                        color: isGenesis ? Colors.amber.shade700 : Colors.teal,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        isGenesis ? 'Blok #0 (Genesis)' : 'Blok #${b.index}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    DateFormat('HH:mm:ss d/M/yy').format(b.timestamp),
+                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${b.userName} (${b.rating} ★): "${b.comment}"',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Hash: ${b.hash.substring(0, 20)}...',
+                                style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.teal),
+                              ),
+                              Text(
+                                'Prev: ${b.previousHash.substring(0, 20)}...',
+                                style: const TextStyle(fontFamily: 'monospace', fontSize: 9.5, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -571,6 +1003,60 @@ class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
             ),
             const SizedBox(height: 10),
 
+            // Blockchain Audit & Integrity Banner
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.shield_outlined, color: Colors.teal, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ulasan Terverifikasi Blockchain',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Terenkripsi SHA-256 anti-manipulasi',
+                          style: TextStyle(fontSize: 10, color: AppColors.getTextSecondary(context)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _openAuditBottomSheet(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.teal,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.analytics_outlined, size: 12, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'Audit Ledger',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             if (reviews.isEmpty)
               Container(
                 padding: const EdgeInsets.all(20),
@@ -710,6 +1196,42 @@ class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
                                         color: review.isLikedByMe
                                             ? AppColors.primary
                                             : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            // On-Chain Verified Chip
+                            InkWell(
+                              onTap: () => _openBlockDetailDialog(context, review.id),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.teal.shade300),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.verified_user_rounded,
+                                      size: 12,
+                                      color: Colors.teal.shade700,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'On-Chain',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal.shade800,
                                       ),
                                     ),
                                   ],
