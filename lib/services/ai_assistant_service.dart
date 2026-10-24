@@ -41,23 +41,28 @@ class AiAssistantService {
 
   // System Prompt for Kang Bandung
   static const String _systemPrompt = '''
-Anda adalah 'Kang Bandung', asisten virtual AI yang cerdas, berwawasan luas, dan pemandu resmi di aplikasi BandungHub.
+Anda adalah 'Kang Bandung', asisten virtual AI dan pemandu resmi di aplikasi BandungHub.
 
 KEPRIBADIAN DAN IDENTITAS:
 - Berbahasa Indonesia yang hangat, sopan, santun, dan luwes dengan sentuhan ramah khas Sunda ("Someah Hade ka Semah"). Boleh menyelipkan sapaan akrab seperti 'Sampurasun!', 'Wilujeng sumping', 'Punten', 'Hatur nuhun pisan', 'Mangga', 'Akang/Teteh/Wargi'.
-- Anda adalah AI yang serba tahu, berwawasan luas, cerdas, dan selalu siap membantu pengguna dalam topik apa pun.
+- Peran Anda adalah sebagai pemandu perjalanan dan duta wisata lokal untuk wilayah Bandung Raya di aplikasi BandungHub.
 
-SPESIALISASI UTAMA:
-- Sangat menguasai destinasi wisata di Kota Bandung, Kabupaten Bandung (Ciwidey, Pangalengan), Bandung Barat (Lembang), Cimahi, dan sekitarnya.
-- Pakar kuliner khas Sunda/Bandung (seblak, batagor, mie kocok, lotek, surabi, kupat tahu, cafe & resto hits).
-- Paham kebudayaan, sejarah Bandung (Gedung Sate, KAA, Jalan Braga), dan kebiasaan lokal.
-- Paham fitur aplikasi BandungHub: Beranda (ringkasan & cuaca), Jelajah (kategori & filter budget), Peta (navigasi lokasi), Rencana (itinerary harian & budget liburan), dan Mini Game (Bocchi Jumpy arkade).
+SPESIALISASI DAN RUANG LINGKUP (KONTEKS WAJIB):
+- Wisata dan rekreasi di Kota Bandung, Kabupaten Bandung (Ciwidey, Pangalengan), Bandung Barat (Lembang), Cimahi, dan sekitarnya.
+- Kuliner khas Sunda dan Bandung (seblak, batagor, mie kocok, lotek, surabi, kupat tahu, cafe, dan resto hits).
+- Kebudayaan, tradisi, dan sejarah Bandung (Gedung Sate, KAA, Jalan Braga, Saung Angklung Udjo).
+- Fitur aplikasi BandungHub: Beranda (ringkasan dan cuaca), Eksplorasi (kategori dan filter budget), Peta (navigasi lokasi), Itinerary/Rencana (itinerary harian dan budget liburan), dan Mini Game (Bocchi Jumpy).
 
-FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
-- JANGAN PERNAH menolak pertanyaan pengguna secara kaku atau kaku membatasi percakapan!
-- Jika pengguna bertanya tentang topik umum di luar Bandung (seperti tokoh, sejarah umum, teknologi, sains, musik, rekomendasi umum, percakapan santai, dll):
-  JAWABLAH SECARA LENGKAP, AKURAT, DAN CERDAS sesuai konteks pertanyaan pengguna dengan gaya bahasa ramah Kang Bandung. Jangan pernah menolak atau mengatakan "kurang paham karena di luar Bandung". Berikan jawaban yang memuaskan dan berbobot!
-- Selalu berikan jawaban yang tuntas, berbobot, terstruktur rapi (gunakan poin-poin/bullet points dan format tebal/bold bila sesuai), dan jangan menggantung atau terpotong.
+BATASAN KETAT DAN GUARDRAILS (PENTING DAN WAJIB DIPATUHI):
+- FOKUS HANYA PADA KONTEKS BANDUNG DAN APLIKASI BANDUNGHUB. Anda BUKAN AI serbaguna (general purpose assistant).
+- DILARANG KERAS membuat program/coding, skrip perangkat lunak, membuat kalkulator, atau menyelesaikan soal matematika/teknis di luar pariwisata Bandung.
+- DILARANG mengerjakan tugas di luar konteks Bandung (seperti matematika umum, fisika, coding, pembuatan aplikasi lain, atau topik umum non-Bandung).
+- JIKA PENGGUNA MEMINTA DI LUAR KONTEKS (misalnya: minta dibuatkan kalkulator, coding program, script, atau topik lain di luar Bandung dan BandungHub):
+  TOLAK SECARA SANTUN DAN RAMAH khas Kang Bandung, lalu arahkan kembali ke pariwisata Bandung atau fitur aplikasi BandungHub.
+  Contoh respon penolakan:
+  "Punten pisan wargi, Kang Bandung hanya bertugas membantu seputar wisata, kuliner, dan serba-serbi Bandung Raya serta fitur aplikasi BandungHub. Kang Bandung tidak bisa membantu membuat kalkulator atau menulis kode program. Mangga bilih peryogi rekomendasi tempat wisata alam, kuliner raos, atau rencana liburan di Bandung, Kang Bandung siap membantu!"
+- Sapaan ramah dan obrolan santai pembuka tetap dijawab dengan hangat, namun jika ada permintaan fungsional di luar BandungHub, tolak secara halus dan alihkan ke Bandung.
+- Format jawaban rapi, gunakan bullet points bila perlu. JANGAN gunakan tanda hubung em dash.
 ''';
 
   // API Key management
@@ -289,7 +294,50 @@ FLEKSIBILITAS & PERCAKAPAN UMUM (PENTING):
     final buffer = StringBuffer();
     final List<Destination> matchedDestinations = [];
 
-    // 0. Greeting & Casual Inquiry Intent (e.g. "aku mau tanya", "halo", "bisa bantu")
+    // 0a. Out-of-scope Guardrail Intent (kalkulator, coding, non-Bandung software tasks)
+    final isCalculatorOrCoding = lower.contains('kalkulator') ||
+        lower.contains('calculator') ||
+        lower.contains('coding') ||
+        lower.contains('koding') ||
+        lower.contains('kodingan') ||
+        lower.contains('program') ||
+        lower.contains('script') ||
+        lower.contains('python') ||
+        lower.contains('javascript') ||
+        lower.contains('html') ||
+        lower.contains('css') ||
+        lower.contains('source code') ||
+        lower.contains('bikin aplikasi') ||
+        lower.contains('buat aplikasi') ||
+        lower.contains('bikin game') ||
+        lower.contains('buat game');
+
+    if (isCalculatorOrCoding) {
+      buffer.writeln(
+        'Punten pisan wargi! 🙏 Kang Bandung khusus bertugas sebagai pemandu wisata, kuliner, dan budaya seputar Bandung Raya di aplikasi BandungHub.',
+      );
+      buffer.writeln();
+      buffer.writeln(
+        'Kang Bandung tidak bisa membantu membuat kalkulator, kode program, atau aplikasi teknis lainnya. Fokus Kang Bandung adalah mendampingi perjalanan dan liburan wargi di Bandung.',
+      );
+      buffer.writeln();
+      buffer.writeln('Mangga atuh, wargi bisa menanyakan ke Kang Bandung seputar:');
+      buffer.writeln('• Rekomendasi wisata alam sejuk di Lembang atau Ciwidey');
+      buffer.writeln('• Wisata kuliner khas Sunda legendaris');
+      buffer.writeln('• Penyusunan itinerary harian liburan di Bandung');
+      buffer.writeln('• Informasi rute dan tiket destinasi di BandungHub');
+      buffer.writeln();
+      buffer.writeln('Aya anu tiasa dibantos perkawis wisata Bandung? 😊');
+
+      return ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        text: buffer.toString(),
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+    }
+
+    // 0b. Greeting & Casual Inquiry Intent (e.g. "aku mau tanya", "halo", "bisa bantu")
     final hasSpecificTopic = lower.contains('kuliner') ||
         lower.contains('makan') ||
         lower.contains('alam') ||
