@@ -18,8 +18,13 @@ import '../widgets/compass_dial_widget.dart';
 
 class DestinationMapScreen extends StatefulWidget {
   final Destination? initialDestination;
+  final bool isNavigating;
 
-  const DestinationMapScreen({super.key, this.initialDestination});
+  const DestinationMapScreen({
+    super.key,
+    this.initialDestination,
+    this.isNavigating = false,
+  });
 
   @override
   State<DestinationMapScreen> createState() => _DestinationMapScreenState();
@@ -39,6 +44,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   bool _isLocating = false;
   String _selectedCategory = 'Semua';
   Destination? _selectedDestination;
+  bool _isNavigating = false;
 
   // Search state
   List<Destination> _searchResults = [];
@@ -63,7 +69,15 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   void initState() {
     super.initState();
     _selectedDestination = widget.initialDestination;
+    _isNavigating = widget.isNavigating;
     _fetchUserLocation(showNotice: false);
+
+    if (_isNavigating && _selectedDestination != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final start = _userLocation ?? LocationService.defaultBandungCenter;
+        _fitRouteBounds(start, _selectedDestination!.coordinates);
+      });
+    }
 
     // Initialize with cached sensor reading
     _orientation = _sensorService.currentOrientation;
@@ -78,6 +92,24 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
         }
       }
     });
+  }
+
+  void _fitRouteBounds(LatLng start, LatLng dest) {
+    final centerLat = (start.latitude + dest.latitude) / 2;
+    final centerLng = (start.longitude + dest.longitude) / 2;
+    final distKm = _locationService.calculateDistanceInKm(start, dest);
+
+    double zoom = 13.5;
+    if (distKm > 35) {
+      zoom = 10.5;
+    } else if (distKm > 20) {
+      zoom = 11.2;
+    } else if (distKm > 10) {
+      zoom = 12.0;
+    } else if (distKm > 4) {
+      zoom = 12.8;
+    }
+    _mapController.move(LatLng(centerLat, centerLng), zoom);
   }
 
   @override
@@ -107,7 +139,11 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
         if (showNotice) {
           if (isInsideBandung) {
-            _mapController.move(userPos, 14.5);
+            if (_isNavigating && _selectedDestination != null) {
+              _fitRouteBounds(userPos, _selectedDestination!.coordinates);
+            } else {
+              _mapController.move(userPos, 14.5);
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Lokasi Anda di Bandung berhasil ditemukan!'),
@@ -127,6 +163,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
               ),
             );
           }
+        } else if (_isNavigating && _selectedDestination != null) {
+          _fitRouteBounds(userPos, _selectedDestination!.coordinates);
         }
       } else if (showNotice) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -425,9 +463,62 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 userAgentPackageName: MapService.userAgentPackageName,
               ),
 
+              // In-App Navigation Route Polyline Layer
+              if (_isNavigating && _selectedDestination != null)
+                PolylineLayer(
+                  polylines: [
+                    // Outer outline for high-contrast route
+                    Polyline(
+                      points: [
+                        _userLocation ?? LocationService.defaultBandungCenter,
+                        _selectedDestination!.coordinates,
+                      ],
+                      color: AppColors.primaryDark.withValues(alpha: 0.6),
+                      strokeWidth: 7.0,
+                    ),
+                    // Inner vibrant navigation line
+                    Polyline(
+                      points: [
+                        _userLocation ?? LocationService.defaultBandungCenter,
+                        _selectedDestination!.coordinates,
+                      ],
+                      color: AppColors.primary,
+                      strokeWidth: 4.5,
+                    ),
+                  ],
+                ),
+
               // Marker Layer
               MarkerLayer(
                 markers: [
+                  // Start Point Marker if GPS is default Bandung center
+                  if (_isNavigating &&
+                      _selectedDestination != null &&
+                      _userLocation == null)
+                    Marker(
+                      point: LocationService.defaultBandungCenter,
+                      width: 38,
+                      height: 38,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.trip_origin_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   // Destination Markers
                   ...filteredDestinations.map((dest) {
                     final isSelected = _selectedDestination?.id == dest.id;
@@ -522,8 +613,16 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ],
           ),
 
-          // 2. Google Maps-Style Floating Search Bar on Top
-          Positioned(
+          // 2. In-App Navigation Guidance Bar OR Google Maps-Style Floating Search Bar on Top
+          if (_isNavigating && _selectedDestination != null)
+            Positioned(
+              top: 10,
+              left: 14,
+              right: 14,
+              child: _buildNavigationGuidanceHeader(context),
+            )
+          else ...[
+            Positioned(
             top: 10,
             left: 14,
             right: 14,
@@ -775,10 +874,11 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
               ),
             ),
           ),
+        ],
 
           // 4. Compass Heading Badge (Top Left)
           Positioned(
-            top: 114,
+            top: _isNavigating && _selectedDestination != null ? 96 : 114,
             left: 14,
             child: GestureDetector(
               onTap: _showCompassInfoDialog,
@@ -1114,27 +1214,88 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                MapService.openExternalMapNavigation(
-                                  latitude: _selectedDestination!.latitude,
-                                  longitude: _selectedDestination!.longitude,
-                                  destinationName: _selectedDestination!.name,
-                                );
+                                setState(() {
+                                  _isNavigating = !_isNavigating;
+                                });
+                                if (_isNavigating &&
+                                    _selectedDestination != null) {
+                                  final start = _userLocation ??
+                                      LocationService.defaultBandungCenter;
+                                  _fitRouteBounds(
+                                    start,
+                                    _selectedDestination!.coordinates,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Panduan rute in-app aktif menuju ${_selectedDestination!.name}',
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
                               },
-                              icon: const Icon(
-                                Icons.navigation_rounded,
-                                size: 14,
+                              icon: Icon(
+                                _isNavigating
+                                    ? Icons.close_rounded
+                                    : Icons.directions_rounded,
+                                size: 15,
                               ),
-                              label: const Text(
-                                'Navigasi Peta',
-                                style: TextStyle(fontSize: 12),
+                              label: Text(
+                                _isNavigating
+                                    ? 'Hentikan Rute'
+                                    : 'Mulai Navigasi',
+                                style: const TextStyle(fontSize: 12),
                               ),
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8,
                                 ),
+                                backgroundColor: _isNavigating
+                                    ? Colors.red.shade700
+                                    : AppColors.primary,
+                                foregroundColor: Colors.white,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
+                          ),
+                          const SizedBox(width: 4),
+                          PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.more_vert_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            tooltip: 'Opsi Peta Luar',
+                            onSelected: (val) {
+                              if (val == 'external') {
+                                MapService.openExternalMapNavigation(
+                                  latitude: _selectedDestination!.latitude,
+                                  longitude: _selectedDestination!.longitude,
+                                  destinationName: _selectedDestination!.name,
+                                );
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              const PopupMenuItem(
+                                value: 'external',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.open_in_new_rounded,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Buka di Google Maps Eksternal',
+                                      style: TextStyle(fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1143,6 +1304,117 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationGuidanceHeader(BuildContext context) {
+    final start = _userLocation ?? LocationService.defaultBandungCenter;
+    final dest = _selectedDestination!.coordinates;
+    final distKm = _locationService.calculateDistanceInKm(start, dest);
+    final estMinutes = math.max(5, (distKm * 2.2).round());
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.getCardColor(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.navigation_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'PANDUAN RUTE IN-APP',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _locationService.formatDistance(distKm),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Menuju ${_selectedDestination!.name}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13.5,
+                    color: AppColors.getTextPrimary(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '~ $estMinutes menit berkendara (Peta Dalam Aplikasi)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.getTextSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.center_focus_strong_rounded, size: 20),
+            tooltip: 'Pusatkan Rute',
+            onPressed: () => _fitRouteBounds(start, dest),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 20),
+            tooltip: 'Tutup Rute Navigasi',
+            onPressed: () {
+              setState(() {
+                _isNavigating = false;
+              });
+            },
+          ),
         ],
       ),
     );

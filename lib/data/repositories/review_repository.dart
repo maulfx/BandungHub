@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/destination_review.dart';
+import '../../services/review_blockchain_service.dart';
 import '../../services/supabase_service.dart';
 
 class ReviewRepository extends ChangeNotifier {
   static final ReviewRepository _instance = ReviewRepository._internal();
   factory ReviewRepository() => _instance;
+  ReviewBlockchainService get blockchain => ReviewBlockchainService();
   ReviewRepository._internal();
 
   static const String _storageKey = 'bandunghub_reviews_v1';
@@ -23,6 +25,9 @@ class ReviewRepository extends ChangeNotifier {
       _seedDefaultReviews();
       await _saveToStorage();
     }
+    // Sinkronkan ulasan ke dalam Review Blockchain Ledger
+    await ReviewBlockchainService().init();
+    await ReviewBlockchainService().syncWithExistingReviews(_reviews);
     notifyListeners();
   }
 
@@ -81,6 +86,9 @@ class ReviewRepository extends ChangeNotifier {
     _reviews.insert(0, newReview);
     notifyListeners();
     await _saveToStorage();
+
+    // Catat secara kriptografis ke dalam Review Blockchain Ledger
+    await ReviewBlockchainService().addReviewBlock(newReview);
 
     // Kirim juga ke Supabase jika sedang terhubung
     final sb = SupabaseService();
