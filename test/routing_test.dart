@@ -20,6 +20,11 @@ void main() {
       expect(TransportMode.motorcycle.label, equals('Motor'));
       expect(TransportMode.walking.label, equals('Jalan Kaki'));
       expect(TransportMode.transit.label, equals('Kereta / Transit'));
+
+      expect(TransportMode.car.vehicleConstraintNote, contains('tol'));
+      expect(TransportMode.motorcycle.vehicleConstraintNote, contains('Non-tol'));
+      expect(TransportMode.walking.vehicleConstraintNote, contains('Trotoar'));
+      expect(TransportMode.transit.vehicleConstraintNote, contains('Multimoda'));
     });
 
     test('findNearestStation correctly identifies Bandung train stations', () {
@@ -94,6 +99,10 @@ void main() {
       expect(transitRoute.mode, equals(TransportMode.transit));
       expect(transitRoute.nearestOriginStation, isNotNull);
       expect(transitRoute.nearestDestStation, isNotNull);
+      expect(transitRoute.transitDetails, isNotNull);
+      expect(transitRoute.transitDetails!.firstMilePoints, isNotEmpty);
+      expect(transitRoute.transitDetails!.trainTrackPoints, isNotEmpty);
+      expect(transitRoute.transitDetails!.lastMilePoints, isNotEmpty);
     });
   });
 }
