@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../../models/user_profile.dart';
 
@@ -15,6 +17,55 @@ class AuthStorage {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _useSecureStorage = true;
+  Database? _db;
+
+  // Initialize SQLite database table for user_profiles
+  Future<Database?> _getDatabase() async {
+    if (kIsWeb) return null;
+    if (_db != null && _db!.isOpen) return _db;
+    try {
+      final databasesPath = await getDatabasesPath();
+      final path = p.join(databasesPath, 'bandunghub.db');
+      _db = await openDatabase(
+        path,
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS user_profiles (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              email TEXT NOT NULL,
+              avatar_url TEXT,
+              pin_hash TEXT,
+              is_biometric_enabled INTEGER NOT NULL,
+              is_guest INTEGER NOT NULL,
+              created_at TEXT NOT NULL,
+              last_login_at TEXT NOT NULL
+            )
+          ''');
+        },
+        onOpen: (db) async {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS user_profiles (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              email TEXT NOT NULL,
+              avatar_url TEXT,
+              pin_hash TEXT,
+              is_biometric_enabled INTEGER NOT NULL,
+              is_guest INTEGER NOT NULL,
+              created_at TEXT NOT NULL,
+              last_login_at TEXT NOT NULL
+            )
+          ''');
+        },
+      );
+      return _db;
+    } catch (e) {
+      debugPrint('SQLite database connection in AuthStorage ($e). Using secure storage fallback.');
+      return null;
+    }
+  }
 
   // Safe write into secure storage with SharedPreferences fallback
   Future<void> _safeWrite(String key, String value) async {
@@ -71,6 +122,30 @@ class AuthStorage {
       'token_${user.id}_${DateTime.now().millisecondsSinceEpoch}',
     );
 
+    // Save to SQLite database table user_profiles
+    try {
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.insert(
+          'user_profiles',
+          {
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'avatar_url': user.avatarUrl,
+            'pin_hash': user.pinHash,
+            'is_biometric_enabled': user.isBiometricEnabled ? 1 : 0,
+            'is_guest': user.isGuest ? 1 : 0,
+            'created_at': user.createdAt.toIso8601String(),
+            'last_login_at': user.lastLoginAt.toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to save user into SQLite user_profiles: $e');
+    }
+
     // Also persist or update in registered users map if not guest
     if (!user.isGuest) {
       final users = await getRegisteredUsers();
@@ -84,13 +159,64 @@ class AuthStorage {
   // Load current active user
   Future<UserProfile?> getCurrentUser() async {
     final raw = await _safeRead(_keyCurrentUser);
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      return UserProfile.fromJson(raw);
-    } catch (e) {
-      debugPrint('Error parsing current user: $e');
-      return null;
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final cached = UserProfile.fromJson(raw);
+        // Also check if SQLite has the latest profile
+        try {
+          final db = await _getDatabase();
+          if (db != null) {
+            final maps = await db.query(
+              'user_profiles',
+              where: 'id = ?',
+              whereArgs: [cached.id],
+            );
+            if (maps.isNotEmpty) {
+              final row = maps.first;
+              return cached.copyWith(
+                name: row['name'] as String?,
+                avatarUrl: row['avatar_url'] as String?,
+              );
+            }
+          }
+        } catch (_) {}
+        return cached;
+      } catch (e) {
+        debugPrint('Error parsing current user: $e');
+      }
     }
+
+    // Fallback: check SQLite database directly
+    try {
+      final db = await _getDatabase();
+      if (db != null) {
+        final maps = await db.query(
+          'user_profiles',
+          orderBy: 'last_login_at DESC',
+          limit: 1,
+        );
+        if (maps.isNotEmpty) {
+          final row = maps.first;
+          return UserProfile(
+            id: row['id'] as String,
+            name: row['name'] as String,
+            email: row['email'] as String,
+            avatarUrl: row['avatar_url'] as String?,
+            pinHash: row['pin_hash'] as String?,
+            isBiometricEnabled: (row['is_biometric_enabled'] as int? ?? 0) == 1,
+            isGuest: (row['is_guest'] as int? ?? 0) == 1,
+            createdAt:
+                DateTime.tryParse(row['created_at'] as String? ?? '') ??
+                    DateTime.now(),
+            lastLoginAt:
+                DateTime.tryParse(row['last_login_at'] as String? ?? '') ??
+                    DateTime.now(),
+          );
+        }
+      }
+    } catch (_) {}
+
+    return null;
   }
 
   // Clear session (Logout)

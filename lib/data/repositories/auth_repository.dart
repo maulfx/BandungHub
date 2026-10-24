@@ -15,19 +15,21 @@ class AuthRepository extends ChangeNotifier {
   UserProfile? _currentUser;
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _isSessionUnlocked = false;
 
   UserProfile? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
+  bool get isSessionUnlocked => _isSessionUnlocked;
 
   // Convenience getters
-  bool get isLoggedIn => _currentUser != null && !_currentUser!.isGuest;
-  bool get isGuest => _currentUser == null || _currentUser!.isGuest;
+  bool get isLoggedIn => _currentUser != null;
+  bool get isGuest => false;
   bool get isAdmin => _currentUser?.isAdmin ?? false;
   bool get isBiometricEnabled => _currentUser?.isBiometricEnabled ?? false;
   bool get hasPin => _currentUser?.hasPin ?? false;
-  String get userName => _currentUser?.name ?? 'Tamu BandungHub';
-  String get userEmail => _currentUser?.email ?? 'tamu@bandunghub.local';
+  String get userName => _currentUser?.name ?? 'Pengguna';
+  String get userEmail => _currentUser?.email ?? '';
 
   // Initialize repository on app launch
   Future<void> init() async {
@@ -36,18 +38,22 @@ class AuthRepository extends ChangeNotifier {
 
     try {
       final savedUser = await _storage.getCurrentUser();
-      if (savedUser != null) {
+      if (savedUser != null && !savedUser.isGuest) {
         _currentUser = savedUser.copyWith(lastLoginAt: DateTime.now());
         await _storage.saveCurrentUser(_currentUser!);
         if (savedUser.isBiometricEnabled) {
           await _storage.saveBiometricUserEmail(savedUser.email);
         }
+        // Real saved accounts require biometric or PIN unlock (bank-style)
+        _isSessionUnlocked = false;
       } else {
         _currentUser = null;
+        _isSessionUnlocked = false;
       }
     } catch (e) {
       debugPrint('AuthRepository init error: $e');
       _currentUser = null;
+      _isSessionUnlocked = false;
     } finally {
       _isLoading = false;
       _isInitialized = true;
@@ -94,6 +100,7 @@ class AuthRepository extends ChangeNotifier {
         await _storage.saveBiometricUserEmail(user.email);
       }
 
+      _isSessionUnlocked = true;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -136,6 +143,7 @@ class AuthRepository extends ChangeNotifier {
       await _storage.savePasswordHash(cleanEmail, passHash);
       await _storage.saveCurrentUser(newUser);
       _currentUser = newUser;
+      _isSessionUnlocked = true;
 
       _isLoading = false;
       notifyListeners();
@@ -202,6 +210,7 @@ class AuthRepository extends ChangeNotifier {
     if (success) {
       _currentUser = targetUser.copyWith(lastLoginAt: DateTime.now());
       await _storage.saveCurrentUser(_currentUser!);
+      _isSessionUnlocked = true;
       notifyListeners();
       return true;
     }
@@ -224,6 +233,7 @@ class AuthRepository extends ChangeNotifier {
     if (targetUser.verifyPin(pin)) {
       _currentUser = targetUser.copyWith(lastLoginAt: DateTime.now());
       await _storage.saveCurrentUser(_currentUser!);
+      _isSessionUnlocked = true;
       notifyListeners();
       return true;
     }
@@ -234,6 +244,7 @@ class AuthRepository extends ChangeNotifier {
   Future<void> loginAsGuest() async {
     _currentUser = UserProfile.guest();
     await _storage.saveCurrentUser(_currentUser!);
+    _isSessionUnlocked = true;
     notifyListeners();
   }
 
@@ -245,6 +256,7 @@ class AuthRepository extends ChangeNotifier {
       _currentUser!.email,
       UserProfile.hashSecret('bandung123'),
     );
+    _isSessionUnlocked = true;
     notifyListeners();
   }
 
@@ -341,10 +353,25 @@ class AuthRepository extends ChangeNotifier {
     }
   }
 
+  // Manual session unlock (e.g. after successful PIN/Biometric verification)
+  void unlockSession() {
+    _isSessionUnlocked = true;
+    notifyListeners();
+  }
+
+  // Manual session lock (e.g. on app background timeout)
+  void lockSession() {
+    if (_currentUser != null) {
+      _isSessionUnlocked = false;
+      notifyListeners();
+    }
+  }
+
   // Logout
   Future<void> logout() async {
     await _storage.clearSession();
     _currentUser = null;
+    _isSessionUnlocked = false;
     notifyListeners();
   }
 }

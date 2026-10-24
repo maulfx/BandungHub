@@ -99,15 +99,29 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     final centerLng = (start.longitude + dest.longitude) / 2;
     final distKm = _locationService.calculateDistanceInKm(start, dest);
 
-    double zoom = 13.5;
-    if (distKm > 35) {
-      zoom = 10.5;
+    // Calculate dynamic zoom based on actual distance so routes from any city
+    // (Jakarta, Bekasi, Surabaya, etc.) to Bandung fit comfortably on screen
+    double zoom;
+    if (distKm > 600) {
+      zoom = 5.8;
+    } else if (distKm > 350) {
+      zoom = 6.8;
+    } else if (distKm > 200) {
+      zoom = 7.6;
+    } else if (distKm > 100) {
+      zoom = 8.4;
+    } else if (distKm > 60) {
+      zoom = 9.2;
+    } else if (distKm > 35) {
+      zoom = 10.2;
     } else if (distKm > 20) {
       zoom = 11.2;
     } else if (distKm > 10) {
       zoom = 12.0;
     } else if (distKm > 4) {
       zoom = 12.8;
+    } else {
+      zoom = 13.8;
     }
     _mapController.move(LatLng(centerLat, centerLng), zoom);
   }
@@ -137,13 +151,25 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
           _userLocation = userPos;
         });
 
-        if (showNotice) {
-          if (isInsideBandung) {
-            if (_isNavigating && _selectedDestination != null) {
-              _fitRouteBounds(userPos, _selectedDestination!.coordinates);
-            } else {
-              _mapController.move(userPos, 14.5);
-            }
+        if (_isNavigating && _selectedDestination != null) {
+          // If navigating, always fit route from user's current location to destination
+          _fitRouteBounds(userPos, _selectedDestination!.coordinates);
+          if (showNotice) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isInsideBandung
+                      ? 'Lokasi Anda ditemukan. Menampilkan rute ke ${_selectedDestination!.name}!'
+                      : 'Lokasi Anda (di luar Bandung) terdeteksi. Menampilkan rute perjalanan ke ${_selectedDestination!.name}!',
+                ),
+                backgroundColor: AppColors.primary,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        } else if (isInsideBandung) {
+          _mapController.move(userPos, 14.5);
+          if (showNotice) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Lokasi Anda di Bandung berhasil ditemukan!'),
@@ -151,20 +177,21 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 duration: Duration(seconds: 1),
               ),
             );
-          } else {
-            _mapController.move(LocationService.defaultBandungCenter, 12.5);
+          }
+        } else {
+          // User is outside Bandung and not currently navigating
+          _mapController.move(userPos, 12.0);
+          if (showNotice) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
-                  'GPS mendeteksi Anda di luar Bandung. Peta difokuskan khusus ke wilayah Bandung.',
+                  'Lokasi Anda terdeteksi di luar Bandung. Pilih destinasi wisata untuk melihat rute perjalanan.',
                 ),
                 backgroundColor: AppColors.secondary,
                 duration: Duration(seconds: 3),
               ),
             );
           }
-        } else if (_isNavigating && _selectedDestination != null) {
-          _fitRouteBounds(userPos, _selectedDestination!.coordinates);
         }
       } else if (showNotice) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -445,9 +472,9 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   ? widget.initialDestination!.coordinates
                   : LocationService.defaultBandungCenter,
               initialZoom: widget.initialDestination != null ? 14.5 : 12.0,
-              minZoom: 10.0,
+              minZoom: 4.0,
               maxZoom: 18.0,
-              cameraConstraint: MapService.bandungCameraConstraint,
+              cameraConstraint: const CameraConstraint.unconstrained(),
               onTap: (tapPosition, point) {
                 FocusScope.of(context).unfocus();
                 setState(() {

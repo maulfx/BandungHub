@@ -29,11 +29,15 @@ class _TravelConverterScreenState extends State<TravelConverterScreen>
       TravelConverterService.supportedTimezones[3]; // SGT (Singapura/KL)
   Timer? _liveClockTimer;
   DateTime _currentUtcTime = DateTime.now().toUtc();
+  bool _isRefreshingRates = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Initialize currency rates from cache and fetch live rates
+    _initCurrencyRates();
 
     // Live clock update every second
     _liveClockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -43,6 +47,38 @@ class _TravelConverterScreenState extends State<TravelConverterScreen>
         });
       }
     });
+  }
+
+  Future<void> _initCurrencyRates() async {
+    await TravelConverterService.loadCachedRates();
+    if (mounted) setState(() {});
+    final success = await TravelConverterService.fetchLiveRates();
+    if (mounted && success) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleRefreshRates() async {
+    if (_isRefreshingRates) return;
+    setState(() => _isRefreshingRates = true);
+
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await TravelConverterService.fetchLiveRates(force: true);
+
+    if (mounted) {
+      setState(() => _isRefreshingRates = false);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Kurs valuta asing berhasil diperbarui ke nilai pasar live!'
+                : 'Gagal memperbarui kurs live. Menggunakan data tersimpan terakhir.',
+          ),
+          backgroundColor: success ? AppColors.success : AppColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -161,6 +197,77 @@ class _TravelConverterScreenState extends State<TravelConverterScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Live Exchange Rate Status Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.getCardColor(context),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.getBorderColor(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: TravelConverterService.isLiveRates
+                        ? AppColors.success
+                        : AppColors.warning,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        TravelConverterService.isLiveRates
+                            ? 'Kurs Pasar Real-Time (Live)'
+                            : 'Kurs Mode Offline (Tersimpan)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getTextPrimary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        TravelConverterService.lastRatesUpdated != null
+                            ? 'Diperbarui: ${DateFormat('dd MMM yyyy, HH:mm').format(TravelConverterService.lastRatesUpdated!)}'
+                            : 'Memuat data kurs pasar...',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.getTextSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: _isRefreshingRates
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded, size: 20),
+                  tooltip: 'Perbarui Kurs Sekarang',
+                  onPressed: _isRefreshingRates ? null : _handleRefreshRates,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
           // Converted Result Banner Card
           Container(
             width: double.infinity,

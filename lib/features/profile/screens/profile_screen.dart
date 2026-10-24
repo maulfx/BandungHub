@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -8,12 +12,10 @@ import '../../../data/repositories/itinerary_repository.dart';
 import '../../../data/repositories/theme_repository.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
-import '../../auth/screens/register_screen.dart';
 import '../../../data/repositories/offline_sync_repository.dart';
 import '../../academic/screens/course_feedback_screen.dart';
 import '../../converter/screens/travel_converter_screen.dart';
 import '../../offline/screens/offline_sync_screen.dart';
-import '../../../shared/widgets/google_logo_icon.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -76,8 +78,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  ImageProvider? _getAvatarProvider(String? avatarUrl) {
+    if (avatarUrl == null || avatarUrl.trim().isEmpty) return null;
+    final clean = avatarUrl.trim();
+    if (clean.startsWith('data:image')) {
+      try {
+        final commaIndex = clean.indexOf(',');
+        final base64Data =
+            commaIndex != -1 ? clean.substring(commaIndex + 1) : clean;
+        final bytes = base64Decode(base64Data);
+        return MemoryImage(bytes);
+      } catch (e) {
+        debugPrint('Error decoding base64 avatar: $e');
+        return null;
+      }
+    }
+    if (clean.startsWith('assets/')) {
+      return AssetImage(clean);
+    }
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return NetworkImage(clean);
+    }
+    try {
+      final file = File(clean);
+      if (file.existsSync()) {
+        return FileImage(file);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        final base64String = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        await _authRepo.updateProfile(avatarUrl: base64String);
+        if (mounted) {
+          final sourceName =
+              source == ImageSource.gallery ? 'galeri' : 'kamera';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Foto profil dari $sourceName berhasil disimpan ke database!',
+              ),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih foto: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   void _showChangeAvatarDialog() {
-    final urlController = TextEditingController();
     final presets = [
       {
         'label': 'Bocchi 🎸',
@@ -174,7 +244,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'Pilih Avatar Keren BandungHub',
+                  'Upload dari Perangkat',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          await _pickImage(ImageSource.gallery);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.photo_library_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Buka Galeri',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          await _pickImage(ImageSource.camera);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.secondary.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.camera_alt_rounded,
+                                color: AppColors.secondary,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Buka Kamera',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 10),
+                const Text(
+                  'Atau Pilih Karakter Avatar BandungHub',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -197,7 +365,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                  'Foto profil berhasil diubah ke $label!'),
+                                'Foto profil berhasil diubah ke $label dan tersimpan di database!',
+                              ),
                               backgroundColor: AppColors.success,
                             ),
                           );
@@ -237,68 +406,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 10),
-                const Text(
-                  'Atau Masukkan Link / URL Foto Kustom',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: urlController,
-                        decoration: InputDecoration(
-                          hintText: 'https://example.com/foto.jpg',
-                          hintStyle: const TextStyle(fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () async {
-                        final inputUrl = urlController.text.trim();
-                        if (inputUrl.isNotEmpty) {
-                          Navigator.pop(sheetContext);
-                          await _authRepo.updateProfile(avatarUrl: inputUrl);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Foto profil berhasil diperbarui!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: const Text('Pasang'),
-                    ),
-                  ],
-                ),
                 if (_authRepo.currentUser?.avatarUrl != null &&
                     _authRepo.currentUser!.avatarUrl!.trim().isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -314,7 +421,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                  'Foto profil berhasil dihapus (kembali ke bawaan).'),
+                                'Foto profil berhasil dihapus dari database (kembali ke bawaan).',
+                              ),
                               backgroundColor: AppColors.secondary,
                             ),
                           );
@@ -566,7 +674,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _confirmLogout() {
-    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -576,7 +683,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           title: const Text('Konfirmasi Keluar'),
           content: const Text(
-            'Apakah Anda yakin ingin keluar dari akun ini? Sesi Anda akan beralih ke mode Tamu.',
+            'Apakah Anda yakin ingin keluar dari akun ini? Anda akan diarahkan kembali ke halaman masuk.',
           ),
           actions: [
             TextButton(
@@ -584,16 +691,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () async {
                 Navigator.pop(dialogContext);
                 await _authRepo.logout();
                 if (mounted) {
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Anda telah keluar dari akun.'),
-                      backgroundColor: AppColors.secondary,
-                    ),
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
                   );
                 }
               },
@@ -613,7 +721,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListenableBuilder(
       listenable: Listenable.merge([_authRepo, _themeRepo]),
       builder: (context, _) {
-        final isGuest = _authRepo.isGuest;
         final hasPin = _authRepo.hasPin;
         final isBiometric = _authRepo.isBiometricEnabled;
 
@@ -621,15 +728,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           appBar: AppBar(
             title: const Text('Profil & Keamanan Akun'),
             actions: [
-              if (!isGuest)
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: AppColors.primary,
-                  ),
-                  tooltip: 'Ubah Nama Profil',
-                  onPressed: _openEditNameDialog,
+              IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.primary,
                 ),
+                tooltip: 'Ubah Nama Profil',
+                onPressed: _openEditNameDialog,
+              ),
             ],
           ),
           body: SingleChildScrollView(
@@ -661,20 +767,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? const Color(0xFF673AB7)
                                         : AppColors.primary)
                                     .withValues(alpha: 0.12),
-                                backgroundImage: (_authRepo
-                                                .currentUser?.avatarUrl !=
-                                            null &&
-                                        _authRepo.currentUser!.avatarUrl!
-                                            .trim()
-                                            .isNotEmpty)
-                                    ? (_authRepo.currentUser!.avatarUrl!
-                                            .startsWith('assets/')
-                                        ? AssetImage(_authRepo
-                                                .currentUser!.avatarUrl!)
-                                            as ImageProvider
-                                        : NetworkImage(
-                                            _authRepo.currentUser!.avatarUrl!))
-                                    : null,
+                                backgroundImage: _getAvatarProvider(
+                                    _authRepo.currentUser?.avatarUrl),
                                 child: (_authRepo.currentUser?.avatarUrl ==
                                             null ||
                                         _authRepo.currentUser!.avatarUrl!
@@ -683,9 +777,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? Icon(
                                         _authRepo.isAdmin
                                             ? Icons.admin_panel_settings_rounded
-                                            : (isGuest
-                                                ? Icons.person_outline_rounded
-                                                : Icons.person_rounded),
+                                            : Icons.person_rounded,
                                         size: 52,
                                         color: _authRepo.isAdmin
                                             ? const Color(0xFF673AB7)
@@ -771,13 +863,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Builder(
                   builder: (context) {
                     final isAdmin = _authRepo.isAdmin;
-                    final provider = _authRepo.currentUser?.authProvider ?? 'email';
-                    final isGoogle = provider == 'google';
                     final badgeColor = isAdmin
                         ? const Color(0xFF673AB7)
-                        : (isGuest
-                            ? AppColors.warning
-                            : (isGoogle ? Colors.blue.shade800 : AppColors.success));
+                        : AppColors.success;
 
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -801,18 +889,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Color(0xFF673AB7),
                             ),
                             const SizedBox(width: 6),
-                          ] else if (isGoogle) ...[
-                            const GoogleLogoIcon(size: 14),
-                            const SizedBox(width: 6),
                           ],
                           Text(
                             isAdmin
                                 ? 'Hak Akses: Administrator BandungHub'
-                                : (isGuest
-                                    ? 'Mode Tamu (Guest Traveler)'
-                                    : (isGoogle
-                                        ? 'Terverifikasi Akun Google'
-                                        : 'Akun Resmi Terverifikasi')),
+                                : 'Akun Resmi Terverifikasi',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -832,107 +913,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 20),
                 ],
 
-                // Guest Login CTA Card (if guest)
-                if (isGuest) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.08),
-                          AppColors.secondary.withValues(alpha: 0.08),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.stars_rounded, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Dapatkan Akses Penuh BandungHub',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Simpan itinerary liburan, aktifkan login biometrik cepat, dan simpan destinasi favorit Anda.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginScreen(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Masuk Akun',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const RegisterScreen(),
-                                    ),
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Daftar Baru',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+
 
                 // Statistics Card
                 ListenableBuilder(
@@ -1281,57 +1262,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Logout or Switch Account Button
-                if (!isGuest)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _confirmLogout,
-                      icon: const Icon(
-                        Icons.logout_rounded,
+                // Logout Button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _confirmLogout,
+                    icon: const Icon(
+                      Icons.logout_rounded,
+                      color: AppColors.error,
+                    ),
+                    label: const Text(
+                      'Keluar dari Akun',
+                      style: TextStyle(
                         color: AppColors.error,
-                      ),
-                      label: const Text(
-                        'Keluar dari Akun',
-                        style: TextStyle(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: AppColors.error),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
-                else
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.login_rounded),
-                      label: const Text(
-                        'Masuk / Daftar Akun',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
+                ),
                 const SizedBox(height: 24),
               ],
             ),

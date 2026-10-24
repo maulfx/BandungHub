@@ -27,7 +27,7 @@ class MapService {
       );
 
   static CameraConstraint get bandungCameraConstraint =>
-      CameraConstraint.containCenter(bounds: bandungBounds);
+      const CameraConstraint.unconstrained();
 
   // Opens external navigation app (Google Maps, Waze, etc.)
   static Future<bool> openExternalMapNavigation({
