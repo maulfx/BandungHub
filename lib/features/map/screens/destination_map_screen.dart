@@ -12,6 +12,7 @@ import '../../../models/destination.dart';
 import '../../../services/bandung_places_search_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/map_service.dart';
+import '../../../services/routing_service.dart';
 import '../../../services/sensor_service.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
 import '../widgets/compass_dial_widget.dart';
@@ -54,6 +55,13 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   // Additional dynamic markers found via search
   final List<Destination> _customSearchedMarkers = [];
 
+  // Routing & Transportation Mode State
+  final RoutingService _routingService = RoutingService();
+  TransportMode _selectedTransportMode = TransportMode.car;
+  List<LatLng> _currentRoutePoints = [];
+  RouteDetails? _currentRouteDetails;
+  bool _isLoadingRoute = false;
+
   // Compass & Accelerometer State
   StreamSubscription<CompassOrientation>? _compassSub;
   CompassOrientation _orientation = CompassOrientation.initial;
@@ -74,8 +82,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
     if (_isNavigating && _selectedDestination != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final start = _userLocation ?? LocationService.defaultBandungCenter;
-        _fitRouteBounds(start, _selectedDestination!.coordinates);
+        _fetchRoute();
       });
     }
 
@@ -94,13 +101,103 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     });
   }
 
+  Future<void> _fetchRoute() async {
+    if (_selectedDestination == null) return;
+    final start = _userLocation ?? LocationService.defaultBandungCenter;
+    final dest = _selectedDestination!.coordinates;
+
+    setState(() {
+      _isLoadingRoute = true;
+    });
+
+    try {
+      final details = await _routingService.getRoute(
+        start: start,
+        destination: dest,
+        mode: _selectedTransportMode,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoadingRoute = false;
+          _currentRouteDetails = details;
+          _currentRoutePoints = details.points;
+        });
+        _fitRouteBounds(start, dest);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingRoute = false;
+          _currentRoutePoints = [start, dest];
+        });
+        _fitRouteBounds(start, dest);
+      }
+    }
+  }
+
+  void _onTransportModeChanged(TransportMode mode) {
+    if (_selectedTransportMode == mode && _currentRoutePoints.isNotEmpty) return;
+    setState(() {
+      _selectedTransportMode = mode;
+    });
+    if (_isNavigating && _selectedDestination != null) {
+      _fetchRoute();
+    }
+  }
+
   void _fitRouteBounds(LatLng start, LatLng dest) {
+    if (_currentRoutePoints.length > 2) {
+      // Calculate true bounding box encompassing all road turn points
+      double minLat = start.latitude;
+      double maxLat = start.latitude;
+      double minLng = start.longitude;
+      double maxLng = start.longitude;
+
+      for (final p in _currentRoutePoints) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+
+      final centerLat = (minLat + maxLat) / 2;
+      final centerLng = (minLng + maxLng) / 2;
+      final distKm = _locationService.calculateDistanceInKm(
+        LatLng(minLat, minLng),
+        LatLng(maxLat, maxLng),
+      );
+
+      double zoom;
+      if (distKm > 600) {
+        zoom = 5.8;
+      } else if (distKm > 350) {
+        zoom = 6.8;
+      } else if (distKm > 200) {
+        zoom = 7.6;
+      } else if (distKm > 100) {
+        zoom = 8.4;
+      } else if (distKm > 60) {
+        zoom = 9.2;
+      } else if (distKm > 35) {
+        zoom = 10.2;
+      } else if (distKm > 20) {
+        zoom = 11.2;
+      } else if (distKm > 10) {
+        zoom = 12.0;
+      } else if (distKm > 4) {
+        zoom = 12.8;
+      } else {
+        zoom = 13.8;
+      }
+      _mapController.move(LatLng(centerLat, centerLng), zoom);
+      return;
+    }
+
     final centerLat = (start.latitude + dest.latitude) / 2;
     final centerLng = (start.longitude + dest.longitude) / 2;
     final distKm = _locationService.calculateDistanceInKm(start, dest);
 
-    // Calculate dynamic zoom based on actual distance so routes from any city
-    // (Jakarta, Bekasi, Surabaya, etc.) to Bandung fit comfortably on screen
     double zoom;
     if (distKm > 600) {
       zoom = 5.8;
@@ -153,7 +250,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
         if (_isNavigating && _selectedDestination != null) {
           // If navigating, always fit route from user's current location to destination
-          _fitRouteBounds(userPos, _selectedDestination!.coordinates);
+          _fetchRoute();
           if (showNotice) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -490,27 +587,31 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 userAgentPackageName: MapService.userAgentPackageName,
               ),
 
-              // In-App Navigation Route Polyline Layer
+              // In-App Navigation Route Polyline Layer (Following real road network)
               if (_isNavigating && _selectedDestination != null)
                 PolylineLayer(
                   polylines: [
                     // Outer outline for high-contrast route
                     Polyline(
-                      points: [
-                        _userLocation ?? LocationService.defaultBandungCenter,
-                        _selectedDestination!.coordinates,
-                      ],
-                      color: AppColors.primaryDark.withValues(alpha: 0.6),
-                      strokeWidth: 7.0,
+                      points: _currentRoutePoints.isNotEmpty
+                          ? _currentRoutePoints
+                          : [
+                              _userLocation ?? LocationService.defaultBandungCenter,
+                              _selectedDestination!.coordinates,
+                            ],
+                      color: _selectedTransportMode.routeColor.withValues(alpha: 0.35),
+                      strokeWidth: 8.5,
                     ),
-                    // Inner vibrant navigation line
+                    // Inner vibrant navigation line following actual road turns
                     Polyline(
-                      points: [
-                        _userLocation ?? LocationService.defaultBandungCenter,
-                        _selectedDestination!.coordinates,
-                      ],
-                      color: AppColors.primary,
-                      strokeWidth: 4.5,
+                      points: _currentRoutePoints.isNotEmpty
+                          ? _currentRoutePoints
+                          : [
+                              _userLocation ?? LocationService.defaultBandungCenter,
+                              _selectedDestination!.coordinates,
+                            ],
+                      color: _selectedTransportMode.routeColor,
+                      strokeWidth: 5.0,
                     ),
                   ],
                 ),
@@ -1210,6 +1311,63 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
+                      // Transportation Mode Selector Chips in Bottom Card
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 8),
+                        child: Row(
+                          children: TransportMode.values.map((m) {
+                            final isSelected = m == _selectedTransportMode;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () => _onTransportModeChanged(m),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? m.routeColor
+                                          : m.routeColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? m.routeColor
+                                            : m.routeColor.withValues(alpha: 0.25),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          m.icon,
+                                          size: 13,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : m.routeColor,
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          m.label,
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : m.routeColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                       Row(
                         children: [
                           Expanded(
@@ -1246,33 +1404,33 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                                 });
                                 if (_isNavigating &&
                                     _selectedDestination != null) {
-                                  final start = _userLocation ??
-                                      LocationService.defaultBandungCenter;
-                                  _fitRouteBounds(
-                                    start,
-                                    _selectedDestination!.coordinates,
-                                  );
+                                  _fetchRoute();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        'Panduan rute in-app aktif menuju ${_selectedDestination!.name}',
+                                        'Panduan rute ${_selectedTransportMode.label} aktif menuju ${_selectedDestination!.name}',
                                       ),
-                                      backgroundColor: AppColors.primary,
+                                      backgroundColor: _selectedTransportMode.routeColor,
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
+                                } else {
+                                  setState(() {
+                                    _currentRoutePoints = [];
+                                    _currentRouteDetails = null;
+                                  });
                                 }
                               },
                               icon: Icon(
                                 _isNavigating
                                     ? Icons.close_rounded
-                                    : Icons.directions_rounded,
+                                    : _selectedTransportMode.icon,
                                 size: 15,
                               ),
                               label: Text(
                                 _isNavigating
                                     ? 'Hentikan Rute'
-                                    : 'Mulai Navigasi',
+                                    : 'Mulai (${_selectedTransportMode.label})',
                                 style: const TextStyle(fontSize: 12),
                               ),
                               style: ElevatedButton.styleFrom(
@@ -1281,7 +1439,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                                 ),
                                 backgroundColor: _isNavigating
                                     ? Colors.red.shade700
-                                    : AppColors.primary,
+                                    : _selectedTransportMode.routeColor,
                                 foregroundColor: Colors.white,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
@@ -1289,10 +1447,10 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                           ),
                           const SizedBox(width: 4),
                           PopupMenuButton<String>(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.more_vert_rounded,
                               size: 18,
-                              color: AppColors.primary,
+                              color: _selectedTransportMode.routeColor,
                             ),
                             tooltip: 'Opsi Peta Luar',
                             onSelected: (val) {
@@ -1301,6 +1459,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                                   latitude: _selectedDestination!.latitude,
                                   longitude: _selectedDestination!.longitude,
                                   destinationName: _selectedDestination!.name,
+                                  mode: _selectedTransportMode,
                                 );
                               }
                             },
@@ -1339,109 +1498,252 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   Widget _buildNavigationGuidanceHeader(BuildContext context) {
     final start = _userLocation ?? LocationService.defaultBandungCenter;
     final dest = _selectedDestination!.coordinates;
-    final distKm = _locationService.calculateDistanceInKm(start, dest);
-    final estMinutes = math.max(5, (distKm * 2.2).round());
+    final details = _currentRouteDetails;
+    final mode = _selectedTransportMode;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.getCardColor(context),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.35),
+          color: mode.routeColor.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.navigation_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          // Top Guidance Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: mode.routeColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    mode.icon,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: mode.routeColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'NAVIGASI ${mode.label.toUpperCase()}',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: mode.routeColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          if (details != null)
+                            Text(
+                              details.formattedDistance,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: mode.routeColor,
+                              ),
+                            ),
+                          if (_isLoadingRoute) ...[
+                            const SizedBox(width: 8),
+                            const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ],
+                        ],
                       ),
-                      child: const Text(
-                        'PANDUAN RUTE IN-APP',
+                      const SizedBox(height: 2),
+                      Text(
+                        'Menuju ${_selectedDestination!.name}',
                         style: TextStyle(
-                          fontSize: 9.5,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          fontSize: 13,
+                          color: AppColors.getTextPrimary(context),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _locationService.formatDistance(distKm),
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryDark,
+                      Text(
+                        details != null
+                            ? '~ ${details.formattedDuration} (${details.summary})'
+                            : 'Menghitung rute terbaik...',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.getTextSecondary(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Menuju ${_selectedDestination!.name}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.5,
-                    color: AppColors.getTextPrimary(context),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  '~ $estMinutes menit berkendara (Peta Dalam Aplikasi)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.getTextSecondary(context),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.center_focus_strong_rounded, size: 20),
+                  tooltip: 'Pusatkan Rute',
+                  onPressed: () => _fitRouteBounds(start, dest),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  tooltip: 'Tutup Rute Navigasi',
+                  onPressed: () {
+                    setState(() {
+                      _isNavigating = false;
+                      _currentRoutePoints = [];
+                      _currentRouteDetails = null;
+                    });
+                  },
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.center_focus_strong_rounded, size: 20),
-            tooltip: 'Pusatkan Rute',
-            onPressed: () => _fitRouteBounds(start, dest),
+
+          const Divider(height: 1),
+
+          // Google Maps-Style Transport Mode Selector Tabs
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: TransportMode.values.map((m) {
+                final isSelected = m == _selectedTransportMode;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => _onTransportModeChanged(m),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? m.routeColor
+                              : m.routeColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? m.routeColor
+                                : m.routeColor.withValues(alpha: 0.25),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              m.icon,
+                              size: 16,
+                              color: isSelected ? Colors.white : m.routeColor,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              m.label,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
+                                color: isSelected ? Colors.white : m.routeColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 20),
-            tooltip: 'Tutup Rute Navigasi',
-            onPressed: () {
-              setState(() {
-                _isNavigating = false;
-              });
-            },
-          ),
+
+          // Transit info banner if Train / Transit mode selected
+          if (_selectedTransportMode == TransportMode.transit && details != null)
+            Container(
+              margin: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: TransportMode.transit.routeColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: TransportMode.transit.routeColor.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.tram_rounded,
+                    size: 16,
+                    color: Color(0xFF6A1B9A),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Stasiun: ${details.nearestOriginStation?.name ?? 'Stasiun Bandung'} ➔ ${details.nearestDestStation?.name ?? 'Stasiun Terdekat'}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6A1B9A),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      MapService.openExternalMapNavigation(
+                        latitude: _selectedDestination!.latitude,
+                        longitude: _selectedDestination!.longitude,
+                        destinationName: _selectedDestination!.name,
+                        mode: TransportMode.transit,
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'Jadwal KA ➔',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF6A1B9A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

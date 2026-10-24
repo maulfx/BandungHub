@@ -3,6 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'routing_service.dart';
+
 class MapService {
   // Tile Provider settings conforming to OSM usage policy
   static const String osmTileUrl =
@@ -34,10 +36,12 @@ class MapService {
     required double latitude,
     required double longitude,
     required String destinationName,
+    TransportMode mode = TransportMode.car,
   }) async {
-    // 1. Google Maps direct URL intent
+    // 1. Google Maps direct URL intent with dynamic travel mode
+    final travelMode = mode.googleMapsTravelMode;
     final googleMapsUrl = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&travelmode=driving',
+      'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude&travelmode=$travelMode',
     );
 
     // 2. Generic geo scheme

@@ -5,7 +5,7 @@
 [![Blockchain](https://img.shields.io/badge/Blockchain-SHA--256%20Review%20Ledger-6f42c1?logo=blockchain&logoColor=white)](https://github.com/maulfx/BandungHub)
 [![AI](https://img.shields.io/badge/AI-Google%20Gemini%203.5%2F3.8-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
 [![Forex](https://img.shields.io/badge/Forex-Live%20Exchange%20Rates-0D9488?logo=cashapp&logoColor=white)](https://open.er-api.com)
-[![Tests](https://img.shields.io/badge/Tests-Passing%20(16%2F16)-success)](https://flutter.dev)
+[![Tests](https://img.shields.io/badge/Tests-Passing%20(20%2F20)-success)](https://flutter.dev)
 [![Linter](https://img.shields.io/badge/flutter_analyze-0%20Issues-brightgreen)](https://dart.dev)
 [![License](https://img.shields.io/badge/License-Academic-blue.svg)]()
 
@@ -30,7 +30,7 @@ Aplikasi dibangun menggunakan **Flutter** dengan pendekatan arsitektur bersih (*
 | **State Management** | `ChangeNotifier` & `ValueNotifier` | Reaktif, efisien memori, tanpa overhead boilerplate berlebih |
 | **Local Storage** | `sqflite` + `shared_preferences` | Dual-engine storage: SQLite relasional + key-value caching offline |
 | **Review Blockchain** | `crypto` (SHA-256 Hash Chaining) | Buku besar ulasan terenkripsi berantai, Genesis Block #0, audit integritas live & simulasi manipulasi |
-| **Peta & Navigasi** | `flutter_map` + OpenStreetMap | 100% FOSS, tanpa ketergantungan tagihan Google Cloud Maps API, rute fleksibel dari dalam maupun luar kota |
+| **Peta & Navigasi** | `flutter_map` + OSM + OSRM | Rute jalan riil (bukan garis lurus) dengan 4 moda transportasi (Mobil, Motor, Jalan Kaki, Kereta) via OSRM, bebas biaya API key |
 | **AI Travel Assistant** | Google Gemini REST API + Heuristik | Model `gemini-3.5-flash` / `gemini-3.8-flash` + Smart Heuristic Engine, dilengkapi Guardrails anti-out-of-scope |
 | **Keamanan & Auth** | `local_auth` + SHA-256 Checksum | Keamanan Ala Bank (*Bank-Style App Lock*): Sensor Biometrik (Fingerprint/Face ID), PIN 6-digit keypad, dan kunci otomatis saat aplikasi di latar belakang |
 | **Kurs & Konverter** | Open Exchange API (`open.er-api.com`) | Kurs valuta asing real-time (USD, EUR, SGD, MYR, JPY, AUD, CNY, SAR, GBP ke IDR) + offline cache & konversi zona waktu |
@@ -118,18 +118,27 @@ Kang Bandung adalah pemandu virtual resmi BandungHub yang menggabungkan keramaha
 
 ---
 
-## 🗺️ Peta Interaktif OpenStreetMap & Rute Tanpa Batas Wilayah
+## 🗺️ Peta Interaktif OpenStreetMap & Rute Multi-Moda Transportasi
 
-Fitur peta BandungHub memanfaatkan pustaka sumber terbuka `flutter_map` dengan ubin peta OpenStreetMap:
+Fitur peta BandungHub memanfaatkan pustaka sumber terbuka `flutter_map` dengan ubin peta OpenStreetMap dan mesin perutean *OSRM (Open Source Routing Machine)*:
 
 - **100% Bebas Biaya & Tanpa API Key**: Tidak bergantung pada kuota tagihan Google Maps SDK.
-- **Navigasi Rute Fleksibel**:
-  - Batasan kamera kaku (*hard coordinate lock*) yang sebelumnya mengunci tampilan hanya di dalam Bandung telah dihapus.
-  - Wisatawan dari luar kota (seperti Jakarta, Bogor, Surabaya, atau wilayah lainnya) dapat melihat rute perjalanan secara utuh dari posisi mereka saat ini menuju destinasi tujuan di Bandung.
-  - Kamera peta secara otomatis menyesuaikan zoom dan posisi (*fitCameraToBounds*) dengan padding dinamis agar seluruh rute terlihat jelas.
-- **Kompas Arah & Navigasi Eksternal**:
-  - Dilengkapi perhitungan kompas bantalan arah (*bearing math*) menuju destinasi terdekat.
-  - Tombol pintasan langsung membuka rute di Google Maps atau Waze bawaan ponsel pengguna.
+- **Rute Mengikuti Jalan Riil (Bukan Garis Lurus)**:
+  - Mengintegrasikan API perutean OSRM untuk menghasilkan koordinat rute meliuk-liuk mengikuti jalan raya, arteri, dan jalan pintas.
+  - Menghitung jarak tempuh jalan asli (*real distance*) dan estimasi durasi berkendara realistis.
+- **Pemilih 4 Moda Transportasi (Multi-Modal Routing ala Google Maps)**:
+  - 🚗 **Mobil**: Rute jalan utama & jalan tol via profil *driving*.
+  - 🛵 **Motor**: Rute kendaraan roda dua via jalan arteri & jalan pintas dengan estimasi waktu lincah menembus kemacetan lalu lintas Bandung Raya.
+  - 🚶 **Jalan Kaki**: Rute pedestrian / trotoar ramah pejalan kaki via profil *walking*.
+  - 🚆 **Kereta / Transit**: Rekomendasi stasiun terdekat di Bandung Raya (Stasiun Bandung Hall, Kiaracondong, Cimahi, Halte KCIC Whoosh Padalarang, dan Stasiun Tegalluar Whoosh) dilengkapi tombol pintas ke jadwal Google Maps Transit (`travelmode=transit`).
+- **Pewarnaan Rute & Garis Khusus**:
+  - Garis navigasi berubah warna secara dinamis sesuai moda yang dipilih (Biru untuk Mobil, Oranye untuk Motor, Hijau untuk Jalan Kaki, dan Ungu untuk Kereta/Transit).
+- **Navigasi Rute Fleksibel Tanpa Batas Wilayah**:
+  - Batasan kamera kaku (*hard coordinate lock*) telah dihapus sehingga wisatawan dari luar kota (seperti Jakarta, Bogor, Surabaya) dapat melihat rute perjalanan penuh menuju Bandung.
+  - Kamera peta secara otomatis menyesuaikan zoom dan posisi (*fitCameraToBounds*) melingkupi seluruh belokan rute jalan.
+- **Kompas Arah & Navigasi Eksternal Dinamis**:
+  - Perhitungan kompas bantalan arah (*bearing math*) menuju destinasi terdekat.
+  - Tombol buka di Google Maps atau Waze secara otomatis menyematkan moda transportasi yang dipilih pengguna (`travelmode=driving`, `two_wheeler`, `walking`, atau `transit`).
 
 ---
 
@@ -171,7 +180,7 @@ Ikon aplikasi telah diperbarui secara penuh pada seluruh level densitas Android 
 | **03** | **Katalog Destinasi & Pencarian** | 38+ destinasi Bandung terlengkap, pencarian real-time, filter kategori (Alam, Kuliner, Sejarah, Keluarga, Hiburan), slider rentang harga tiket. | `data/repositories/destination_repository.dart`<br>`test/widget_test.dart` |
 | **04** | **Sistem Rekomendasi Pintar** | Filter preferensi wisata berdasarkan budget, kategori favorit, kuis rekomendasi persona, dan personalisasi beranda. | `features/recommendations/`<br>`features/quiz/` |
 | **05** | **Smart Itinerary & SQLite Storage** | Perencana jadwal perjalanan interaktif, estimasi total budget tiket, drag-and-drop reorder, verifikasi hash SHA-256 anti-tamper. | `data/repositories/itinerary_repository.dart`<br>`data/local/itinerary_storage.dart` |
-| **06** | **Peta Interaktif OpenStreetMap** | Visualisasi lokasi wisata di peta Bandung, marker interaktif, rute multi-stop tanpa batasan wilayah, kompas arah (*bearing*), navigasi eksternal (Google Maps/Waze). | `features/map/screens/destination_map_screen.dart`<br>`services/map_service.dart` |
+| **06** | **Peta Interaktif OpenStreetMap & Rute Multi-Moda** | Visualisasi lokasi wisata di peta Bandung, marker interaktif, rute jalan riil mengikuti belokan jalan (OSRM) dengan 4 moda transportasi (Mobil, Motor, Jalan Kaki, Kereta/Transit), kompas arah (*bearing*), navigasi eksternal (Google Maps/Waze). | `features/map/screens/destination_map_screen.dart`<br>`services/routing_service.dart`<br>`services/map_service.dart`<br>`test/routing_test.dart` |
 | **07** | **AI Travel Assistant (Kang Bandung)** | Asisten AI Google Gemini & Heuristik offline dengan persona ramah Sunda dan Domain Guardrails anti-jailbreak. | `services/ai_assistant_service.dart`<br>`test/ai_guardrail_test.dart` |
 | **08** | **Gamifikasi & Mini Game** | Game Arkade *Bocchi Jumpy* dengan kontrol layar sentuh interaktif tanpa tombol panah + Kuis trivia seputar sejarah, budaya, dan kuliner Bandung. | `features/mini_game/screens/bocchi_jumpy_game_screen.dart`<br>`features/quiz/` |
 | **09** | **Aksesibilitas & Mode Gelap (Dark Mode)** | Mode Gelap (*Dark Theme*) otomatis & manual, kontras tinggi, semantic accessibility (*A11y*), target sentuh minimal 48x48 dp. | `data/repositories/theme_repository.dart`<br>`core/theme/` |
@@ -236,15 +245,16 @@ lib/
 
 Proyek ini divalidasi dengan pengujian otomatis (*Automated Testing*) yang komprehensif:
 
-### 1. Menjalankan Semua Unit & Widget Test (16/16 Passed)
+### 1. Menjalankan Semua Unit & Widget Test (20/20 Passed)
 ```bash
 flutter test
 ```
 *Hasil:*
 ```text
-00:03 +16: All tests passed!
+00:03 +20: All tests passed!
 ```
 Cakupan Test Suite:
+- `test/routing_test.dart`: Pengujian routing jalan riil (OSRM), perhitungan jarak/durasi, identifikasi stasiun kereta Bandung, dan pemetaan moda transportasi.
 - `test/ai_guardrail_test.dart`: Verifikasi batasan domain AI Kang Bandung menolak perintah coding & kalkulator di luar konteks wisata.
 - `test/blockchain_test.dart`: Inisialisasi Genesis Block, hashing berantai SHA-256, dan deteksi manipulasi data ulasan.
 - `test/bank_auth_lock_test.dart`: Alur kunci aplikasi ala bank, validasi input PIN 6 digit, auto-logout kembali ke LoginScreen, dan eliminasi guest mode.
