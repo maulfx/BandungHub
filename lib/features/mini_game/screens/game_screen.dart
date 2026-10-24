@@ -178,7 +178,7 @@ class _GameScreenState extends State<GameScreen>
                       content: Text(
                         _isGyroEnabled
                             ? 'Sensor Gyroscope Aktif: Miringkan HP ke kiri/kanan untuk mengarahkan Bocchi!'
-                            : 'Sensor Gyroscope Nonaktif: Gunakan tombol panah di layar.',
+                            : 'Sensor Gyroscope Nonaktif: Sentuh atau geser layar kiri/kanan untuk bergerak.',
                       ),
                       duration: const Duration(seconds: 2),
                       backgroundColor: _isGyroEnabled
@@ -461,7 +461,7 @@ class _GameScreenState extends State<GameScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Miringkan HP (Sensor Gyro) atau gunakan tombol panah sentuh di layar.',
+                          'Miringkan HP (Sensor Gyro) atau sentuh / geser layar kiri dan kanan.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: AppColors.getTextSecondary(context),
@@ -623,8 +623,8 @@ class _GameScreenState extends State<GameScreen>
               const Divider(height: 16),
               _buildGuideDialogItem(
                 '📱',
-                'Kontrol Gyroscope / Kemiringan HP',
-                'Goyang / miringkan HP ke kiri atau kanan. Tersedia juga tombol panah di layar.',
+                'Kontrol Touchscreen & Gyroscope',
+                'Sentuh / geser layar kiri dan kanan, atau aktifkan sensor Gyroscope untuk bermain dengan memiringkan HP.',
               ),
               const Divider(height: 16),
               _buildGuideDialogItem(
@@ -739,6 +739,15 @@ class _GameScreenState extends State<GameScreen>
   Widget _buildGamePlayView(Size size) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTapDown: (details) {
+        if (details.localPosition.dx < size.width / 2) {
+          _controller.moveLeft();
+        } else {
+          _controller.moveRight();
+        }
+      },
+      onTapUp: (_) => _controller.stopMoving(),
+      onTapCancel: () => _controller.stopMoving(),
       onHorizontalDragUpdate: (details) {
         final delta = details.primaryDelta ?? 0;
         _controller.setHorizontalMovement(delta * 0.25);
@@ -867,77 +876,6 @@ class _GameScreenState extends State<GameScreen>
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // On-screen Touch Controls (Bottom Left & Right)
-          Positioned(
-            bottom: 22,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Left Button
-                Listener(
-                  onPointerDown: (_) => _controller.moveLeft(),
-                  onPointerUp: (_) => _controller.stopMoving(),
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF201E3D).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xFFFF7EB3),
-                        width: 2.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF7EB3).withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                ),
-
-                // Right Button
-                Listener(
-                  onPointerDown: (_) => _controller.moveRight(),
-                  onPointerUp: (_) => _controller.stopMoving(),
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF201E3D).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xFFFF7EB3),
-                        width: 2.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF7EB3).withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white,
-                      size: 30,
-                    ),
                   ),
                 ),
               ],

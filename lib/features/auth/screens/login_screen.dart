@@ -373,15 +373,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Header Icon & Title
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    width: 80,
+                    height: 80,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color: Colors.white,
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.getBorderColor(context),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.lock_person_rounded,
-                      size: 48,
-                      color: AppColors.primary,
+                    child: Image.asset(
+                      'assets/images/app_logo_transparent.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
