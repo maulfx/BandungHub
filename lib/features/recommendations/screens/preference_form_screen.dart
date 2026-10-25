@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/repositories/preference_repository.dart';
 import '../../../models/travel_preference.dart';
 import '../../../services/recommendation_engine.dart';
 import 'recommendation_results_screen.dart';
@@ -32,7 +33,8 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
   @override
   void initState() {
     super.initState();
-    final pref = widget.initialPreference ?? const TravelPreference();
+    final pref = widget.initialPreference ??
+        PreferenceRepository().currentPreference;
     _selectedCategories = List.from(pref.preferredCategories);
     _maxBudgetPerPerson = pref.maxBudgetPerPerson;
     _durationDays = pref.durationDays;
@@ -58,6 +60,9 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
       numberOfPeople: _numberOfPeople,
       interests: _selectedInterests,
     );
+
+    // Save preference to repository for HomeScreen AI personalization
+    PreferenceRepository().savePreference(preference);
 
     Navigator.push(
       context,

@@ -203,33 +203,48 @@ class SensorService {
     final pitch = pitchRad * 180 / math.pi;
     final roll = rollRad * 180 / math.pi;
 
-    // Heading calculation
+    // Heading calculation using 3D cross-product vector fusion (identical to Android AOSP SensorManager)
     if (_hasMagnetometerData &&
         (_lastMagX != 0 || _lastMagY != 0 || _lastMagZ != 0)) {
-      // Tilt compensation for magnetometer
-      final cosRoll = math.cos(rollRad);
-      final sinRoll = math.sin(rollRad);
-      final cosPitch = math.cos(pitchRad);
-      final sinPitch = math.sin(pitchRad);
+      // 1. Gravity unit vector (downwards)
+      final normG = math.sqrt(_lastAccelX * _lastAccelX +
+          _lastAccelY * _lastAccelY +
+          _lastAccelZ * _lastAccelZ);
+      if (normG > 0.1) {
+        final gx = _lastAccelX / normG;
+        final gy = _lastAccelY / normG;
+        final gz = _lastAccelZ / normG;
 
-      // Project 3D magnetic field vector onto horizontal plane
-      final xh = _lastMagX * cosRoll + _lastMagZ * sinRoll;
-      final yh = _lastMagX * sinPitch * sinRoll +
-          _lastMagY * cosPitch -
-          _lastMagZ * sinPitch * cosRoll;
+        // 2. East vector: E = m x g
+        final ex = _lastMagY * gz - _lastMagZ * gy;
+        final ey = _lastMagZ * gx - _lastMagX * gz;
+        final ez = _lastMagX * gy - _lastMagY * gx;
+        final normE = math.sqrt(ex * ex + ey * ey + ez * ez);
 
-      // Azimuth from North (0° = North, 90° = East, 180° = South, 270° = West)
-      double magHeading = (math.atan2(-xh, yh) * 180 / math.pi + 360) % 360;
+        if (normE > 0.1) {
+          final invE = 1.0 / normE;
+          final uEx = ex * invE;
+          final uEy = ey * invE;
+          final uEz = ez * invE;
 
-      if (!_hasInitialHeading) {
-        _fusionHeading = magHeading;
-        _hasInitialHeading = true;
-      } else {
-        // Complementary filter: blend gyro responsiveness with absolute magnetic heading
-        final diff = magHeading - _fusionHeading;
-        final shortestDiff = ((diff + 180) % 360 + 360) % 360 - 180;
-        _fusionHeading = (_fusionHeading + shortestDiff * 0.25) % 360;
-        if (_fusionHeading < 0) _fusionHeading += 360;
+          // 3. North vector: N = g x E
+          final ny = gz * uEx - gx * uEz;
+
+          // Azimuth from North (0° = North, 90° = East, 180° = South, 270° = West)
+          // Uses atan2(-uEy, ny) which matches Android AOSP getOrientation and never flips at hand-held tilt
+          double magHeading = (math.atan2(-uEy, ny) * 180 / math.pi + 360) % 360;
+
+          if (!_hasInitialHeading) {
+            _fusionHeading = magHeading;
+            _hasInitialHeading = true;
+          } else {
+            // Complementary filter: blend gyro responsiveness with absolute magnetic heading
+            final diff = magHeading - _fusionHeading;
+            final shortestDiff = ((diff + 180) % 360 + 360) % 360 - 180;
+            _fusionHeading = (_fusionHeading + shortestDiff * 0.25) % 360;
+            if (_fusionHeading < 0) _fusionHeading += 360;
+          }
+        }
       }
     } else {
       // Fallback if magnetometer is missing (e.g. emulator or sensor not ready)

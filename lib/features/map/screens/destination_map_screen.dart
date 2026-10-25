@@ -95,7 +95,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       if (mounted) {
         setState(() => _orientation = data);
         if (_isCompassFollowMode) {
-          _mapController.rotate(_orientation.heading);
+          _mapController.rotate(-_orientation.heading);
         }
       }
     });
@@ -1028,7 +1028,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Transform.rotate(
-                      angle: -_orientation.heading * (math.pi / 180),
+                      angle: _orientation.heading * (math.pi / 180),
                       child: const Icon(
                         Icons.navigation_rounded,
                         color: Colors.redAccent,

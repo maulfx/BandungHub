@@ -26,17 +26,51 @@ class CompassDialWidget extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. Dial Base Ring with Bezel & Radial Grid
-          CustomPaint(
-            size: Size(size, size),
-            painter: _CompassDialBezelPainter(
-              isDark: isDark,
-              primaryColor: AppColors.primary,
+          // 1. Live Rotating Compass Rose (Bezel Ticks + Cardinal Letters + 3D Needle rotate together)
+          Transform.rotate(
+            angle: -heading * (math.pi / 180),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Dial Base Ring with Bezel & Radial Grid
+                CustomPaint(
+                  size: Size(size, size),
+                  painter: _CompassDialBezelPainter(
+                    isDark: isDark,
+                    primaryColor: AppColors.primary,
+                  ),
+                ),
+
+                // Cardinal Direction Letters on Bezel (U, S, T, B)
+                ..._buildCardinalLabels(context),
+
+                // Live 3D Beveled Needle pointing towards U (North)
+                CustomPaint(
+                  size: Size(size * 0.72, size * 0.72),
+                  painter: _CompassNeedlePainter(),
+                ),
+              ],
             ),
           ),
 
-          // 2. Cardinal Direction Letters on Bezel
-          ..._buildCardinalLabels(context),
+          // 2. Fixed Top Reference Index / Lubber Line (Always marks current heading at 12 o'clock)
+          Positioned(
+            top: 1,
+            child: Container(
+              width: 7,
+              height: 10,
+              decoration: BoxDecoration(
+                color: Colors.redAccent,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.redAccent.withValues(alpha: 0.5),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           // 3. Optional Destination Beacon Indicator on Dial Edge
           if (destBearing != null)
@@ -45,7 +79,7 @@ class CompassDialWidget extends StatelessWidget {
               child: Align(
                 alignment: Alignment.topCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
+                  padding: const EdgeInsets.only(top: 12.0),
                   child: Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
@@ -69,16 +103,7 @@ class CompassDialWidget extends StatelessWidget {
               ),
             ),
 
-          // 4. Live Rotating Compass Needle (North Red, South Slate, 3D beveled)
-          Transform.rotate(
-            angle: -heading * (math.pi / 180),
-            child: CustomPaint(
-              size: Size(size * 0.72, size * 0.72),
-              painter: _CompassNeedlePainter(),
-            ),
-          ),
-
-          // 5. Center Metallic Pivot Pin
+          // 4. Center Metallic Pivot Pin
           Container(
             width: 14,
             height: 14,
