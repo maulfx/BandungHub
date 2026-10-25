@@ -51,13 +51,14 @@ class SensorService {
   CompassOrientation _currentOrientation = CompassOrientation.initial;
   CompassOrientation get currentOrientation => _currentOrientation;
 
-  // Cached sensor states for orientation fusion
-  double _lastAccelX = 0;
-  double _lastAccelY = 0;
-  double _lastAccelZ = 9.8;
-  double _lastMagX = 0;
-  double _lastMagY = 0;
-  double _lastMagZ = 0;
+  // Low-pass filtered vectors to eliminate electromagnetic noise and hand jitter
+  double _filteredAccelX = 0;
+  double _filteredAccelY = 0;
+  double _filteredAccelZ = 9.8;
+  double _filteredMagX = 0;
+  double _filteredMagY = 0;
+  double _filteredMagZ = 0;
+
   bool _hasMagnetometerData = false;
   bool _hasInitialHeading = false;
   double _fusionHeading = 0.0;
@@ -128,9 +129,10 @@ class SensorService {
         samplingPeriod: SensorInterval.gameInterval,
       ).listen(
         (event) {
-          _lastAccelX = event.x;
-          _lastAccelY = event.y;
-          _lastAccelZ = event.z;
+          // Low-pass EMA filter (alpha = 0.30) for smooth gravity vector
+          _filteredAccelX = _filteredAccelX * 0.70 + event.x * 0.30;
+          _filteredAccelY = _filteredAccelY * 0.70 + event.y * 0.30;
+          _filteredAccelZ = _filteredAccelZ * 0.70 + event.z * 0.30;
 
           // Game steering: tilt left → positive, right → negative
           // Scaling by 3.5 for comfortable 20-degree tilt steering
@@ -142,7 +144,10 @@ class SensorService {
               (_currentTilt * 0.65 + filteredTilt * 0.35).clamp(-1.0, 1.0);
           _gameTiltController.add(_currentTilt);
 
-          _computeOrientation();
+          // Only compute orientation if no magnetometer yet, otherwise magnetometer ticks handle it
+          if (!_hasMagnetometerData) {
+            _computeOrientation();
+          }
         },
         onError: (e) {
           debugPrint('Accelerometer stream error: $e');
@@ -158,10 +163,17 @@ class SensorService {
         samplingPeriod: SensorInterval.uiInterval,
       ).listen(
         (event) {
-          _lastMagX = event.x;
-          _lastMagY = event.y;
-          _lastMagZ = event.z;
-          _hasMagnetometerData = true;
+          if (!_hasMagnetometerData) {
+            _filteredMagX = event.x;
+            _filteredMagY = event.y;
+            _filteredMagZ = event.z;
+            _hasMagnetometerData = true;
+          } else {
+            // Low-pass EMA filter (alpha = 0.35) to remove electromagnetic fluctuations
+            _filteredMagX = _filteredMagX * 0.65 + event.x * 0.35;
+            _filteredMagY = _filteredMagY * 0.65 + event.y * 0.35;
+            _filteredMagZ = _filteredMagZ * 0.65 + event.z * 0.35;
+          }
 
           _computeOrientation();
         },
@@ -193,32 +205,32 @@ class SensorService {
 
   /// Compute tilt-compensated heading, pitch, roll and cardinal direction
   void _computeOrientation() {
-    // Pitch and Roll in radians from Accelerometer
+    // Pitch and Roll in radians from filtered Accelerometer
     final rollRad = math.atan2(
-      _lastAccelX,
-      math.sqrt(_lastAccelY * _lastAccelY + _lastAccelZ * _lastAccelZ),
+      _filteredAccelX,
+      math.sqrt(_filteredAccelY * _filteredAccelY + _filteredAccelZ * _filteredAccelZ),
     );
-    final pitchRad = math.atan2(_lastAccelY, _lastAccelZ);
+    final pitchRad = math.atan2(_filteredAccelY, _filteredAccelZ);
 
     final pitch = pitchRad * 180 / math.pi;
     final roll = rollRad * 180 / math.pi;
 
     // Heading calculation using 3D cross-product vector fusion (identical to Android AOSP SensorManager)
     if (_hasMagnetometerData &&
-        (_lastMagX != 0 || _lastMagY != 0 || _lastMagZ != 0)) {
+        (_filteredMagX != 0 || _filteredMagY != 0 || _filteredMagZ != 0)) {
       // 1. Gravity unit vector (downwards)
-      final normG = math.sqrt(_lastAccelX * _lastAccelX +
-          _lastAccelY * _lastAccelY +
-          _lastAccelZ * _lastAccelZ);
+      final normG = math.sqrt(_filteredAccelX * _filteredAccelX +
+          _filteredAccelY * _filteredAccelY +
+          _filteredAccelZ * _filteredAccelZ);
       if (normG > 0.1) {
-        final gx = _lastAccelX / normG;
-        final gy = _lastAccelY / normG;
-        final gz = _lastAccelZ / normG;
+        final gx = _filteredAccelX / normG;
+        final gy = _filteredAccelY / normG;
+        final gz = _filteredAccelZ / normG;
 
         // 2. East vector: E = m x g
-        final ex = _lastMagY * gz - _lastMagZ * gy;
-        final ey = _lastMagZ * gx - _lastMagX * gz;
-        final ez = _lastMagX * gy - _lastMagY * gx;
+        final ex = _filteredMagY * gz - _filteredMagZ * gy;
+        final ey = _filteredMagZ * gx - _filteredMagX * gz;
+        final ez = _filteredMagX * gy - _filteredMagY * gx;
         final normE = math.sqrt(ex * ex + ey * ey + ez * ez);
 
         if (normE > 0.1) {
@@ -241,8 +253,11 @@ class SensorService {
             // Complementary filter: blend gyro responsiveness with absolute magnetic heading
             final diff = magHeading - _fusionHeading;
             final shortestDiff = ((diff + 180) % 360 + 360) % 360 - 180;
-            _fusionHeading = (_fusionHeading + shortestDiff * 0.25) % 360;
-            if (_fusionHeading < 0) _fusionHeading += 360;
+            // Ignore micro-noise jitter (< 0.2°) when phone is stationary
+            if (shortestDiff.abs() > 0.2) {
+              _fusionHeading = (_fusionHeading + shortestDiff * 0.30) % 360;
+              if (_fusionHeading < 0) _fusionHeading += 360;
+            }
           }
         }
       }
@@ -252,7 +267,7 @@ class SensorService {
         _fusionHeading = _gyroHeading;
       } else {
         // Fallback from accelerometer tilt
-        _fusionHeading = ((_lastAccelX * 20) + 360) % 360;
+        _fusionHeading = ((_filteredAccelX * 20) + 360) % 360;
       }
     }
 

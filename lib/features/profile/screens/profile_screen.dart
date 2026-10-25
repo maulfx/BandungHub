@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../data/repositories/itinerary_repository.dart';
+import '../../../data/repositories/review_repository.dart';
 import '../../../data/repositories/theme_repository.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
@@ -602,7 +603,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '38 Destinasi wisata tersimpan offline',
+                        '${_destinationRepo.allDestinations.length} Destinasi aktif (Supabase/Katalog)',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.getTextSecondary(context),
@@ -612,6 +613,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(dialogCtx);
+                      // 1. Bersihkan ulasan lokal
+                      await ReviewRepository().clearLocalReviews();
+                      // 2. Bersihkan rencana perjalanan lokal
+                      await ItineraryRepository().clearLocalItineraries();
+                      // 3. Muat ulang destinasi murni dari Supabase Cloud
+                      await DestinationRepository().refreshFromCloud();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Data lokal telah dibersihkan! Aplikasi kini memuat data murni dari Supabase Cloud.',
+                            ),
+                            backgroundColor: AppColors.success,
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.cloud_sync_rounded, size: 18),
+                    label: const Text('Gunakan Data Supabase Murni'),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -635,7 +668,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       }
                     },
                     icon: const Icon(Icons.delete_sweep_rounded, size: 16),
-                    label: const Text('Bersihkan Cache'),
+                    label: const Text('Bersihkan Cache Singgahan'),
                   ),
                 ),
                 const SizedBox(height: 8),

@@ -133,4 +133,14 @@ class ItineraryStorage {
       jsonEncode(current.map((i) => i.toMap()).toList()),
     );
   }
+
+  Future<void> clearAll() async {
+    if (_useSqlite && _database != null) {
+      try {
+        await _database!.delete('itineraries');
+      } catch (_) {}
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey);
+  }
 }

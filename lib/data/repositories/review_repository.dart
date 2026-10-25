@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/config/env_config.dart';
 import '../../models/destination_review.dart';
 import '../../services/review_blockchain_service.dart';
 import '../../services/supabase_service.dart';
@@ -20,8 +21,26 @@ class ReviewRepository extends ChangeNotifier {
   List<DestinationReview> get reviews => allReviews;
 
   Future<void> init() async {
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      try {
+        final cloudReviews = await sb.fetchReviews('');
+        // Gunakan murni ulasan yang tersimpan di Supabase
+        _reviews.clear();
+        _reviews.addAll(cloudReviews);
+        await _saveToStorage();
+        await ReviewBlockchainService().init();
+        await ReviewBlockchainService().syncWithExistingReviews(_reviews);
+        notifyListeners();
+        return;
+      } catch (e) {
+        debugPrint('ReviewRepository fetch cloud error: $e');
+      }
+    }
+
     await _loadFromStorage();
-    if (_reviews.isEmpty) {
+    // Hanya gunakan seed lokal jika Supabase tidak aktif sama sekali dan storage kosong
+    if (_reviews.isEmpty && !EnvConfig.isSupabaseConfigured) {
       _seedDefaultReviews();
       await _saveToStorage();
     }
@@ -29,6 +48,38 @@ class ReviewRepository extends ChangeNotifier {
     await ReviewBlockchainService().init();
     await ReviewBlockchainService().syncWithExistingReviews(_reviews);
     notifyListeners();
+  }
+
+  /// Mengambil ulasan spesifik destinasi dari Supabase Cloud
+  Future<List<DestinationReview>> fetchDestinationReviewsFromCloud(
+    String destinationId,
+  ) async {
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      try {
+        final cloudReviews = await sb.fetchReviews(destinationId);
+        final ids = cloudReviews.map((r) => r.id).toSet();
+        _reviews.removeWhere(
+          (r) => ids.contains(r.id) || r.destinationId == destinationId,
+        );
+        _reviews.insertAll(0, cloudReviews);
+        notifyListeners();
+        await _saveToStorage();
+        return cloudReviews;
+      } catch (e) {
+        debugPrint('fetchDestinationReviewsFromCloud error: $e');
+      }
+    }
+    return getReviewsForDestination(destinationId);
+  }
+
+  /// Hapus cache ulasan lokal agar murni membaca dari Supabase Cloud
+  Future<void> clearLocalReviews() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+    _reviews.clear();
+    notifyListeners();
+    await init();
   }
 
   List<DestinationReview> getReviewsForDestination(String destinationId) {

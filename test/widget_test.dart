@@ -33,7 +33,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.widgetWithText(NavigationDestination, 'Itinerary'),
+      find.widgetWithText(NavigationDestination, 'Rencana'),
       findsOneWidget,
     );
     expect(find.widgetWithText(NavigationDestination, 'Game'), findsOneWidget);

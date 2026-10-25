@@ -65,7 +65,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
   // Compass & Accelerometer State
   StreamSubscription<CompassOrientation>? _compassSub;
   CompassOrientation _orientation = CompassOrientation.initial;
-  bool _isCompassFollowMode = false;
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
@@ -93,9 +92,12 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
     _sensorService.startListening();
     _compassSub = _sensorService.orientationStream.listen((data) {
       if (mounted) {
-        setState(() => _orientation = data);
-        if (_isCompassFollowMode) {
-          _mapController.rotate(-_orientation.heading);
+        final headingDiff = (data.heading - _orientation.heading).abs();
+        final isSignificant = headingDiff > 0.4 ||
+            data.cardinalDirection != _orientation.cardinalDirection;
+
+        if (isSignificant) {
+          setState(() => _orientation = data);
         }
       }
     });
@@ -1011,10 +1013,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                       AppColors.getCardColor(context).withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: _isCompassFollowMode
-                        ? AppColors.primary
-                        : AppColors.getBorderColor(context),
-                    width: _isCompassFollowMode ? 2 : 1.2,
+                    color: AppColors.getBorderColor(context),
+                    width: 1.2,
                   ),
                   boxShadow: const [
                     BoxShadow(
@@ -1027,13 +1027,20 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Transform.rotate(
-                      angle: _orientation.heading * (math.pi / 180),
-                      child: const Icon(
-                        Icons.navigation_rounded,
-                        color: Colors.redAccent,
-                        size: 15,
-                      ),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: _orientation.heading),
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, angle, _) {
+                        return Transform.rotate(
+                          angle: angle * (math.pi / 180),
+                          child: const Icon(
+                            Icons.navigation_rounded,
+                            color: Colors.redAccent,
+                            size: 15,
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -1052,41 +1059,46 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
           // 5. Floating Map Controls (Right Side)
           Positioned(
-            right: 16,
-            bottom: _selectedDestination != null ? 220 : 24,
+            right: 14,
+            bottom: _selectedDestination != null
+                ? (_isNavigating ? 84 : 148)
+                : 24,
             child: Column(
               children: [
                 // Compass Bearing (Accelerometer & Magnetometer)
                 FloatingActionButton.small(
                   heroTag: 'compass_bearing',
-                  backgroundColor: _isCompassFollowMode
-                      ? AppColors.primary
-                      : Colors.white,
-                  foregroundColor: _isCompassFollowMode
-                      ? Colors.white
-                      : AppColors.primary,
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primary,
                   tooltip:
                       'Kompas (${_orientation.heading.toInt()}° ${_orientation.cardinalDirection})',
                   onPressed: _showCompassInfoDialog,
-                  child: Transform.rotate(
-                    angle: -_orientation.heading * (math.pi / 180),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(Icons.navigation_rounded, size: 20),
-                        Positioned(
-                          top: 2,
-                          child: Container(
-                            width: 3.5,
-                            height: 3.5,
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(end: -_orientation.heading),
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, angle, _) {
+                      return Transform.rotate(
+                        angle: angle * (math.pi / 180),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            const Icon(Icons.navigation_rounded, size: 20),
+                            Positioned(
+                              top: 2,
+                              child: Container(
+                                width: 3.5,
+                                height: 3.5,
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1158,366 +1170,406 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
             ),
           ),
 
-          // 5. Selected Destination Bottom Preview Card (Google Maps Style)
+          // 5. Selected Destination Bottom Card (Compact Navigation Bar or Place Preview)
           if (_selectedDestination != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Card(
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+            _isNavigating
+                ? _buildCompactNavigationBottomBar(context)
+                : _buildDestinationPreviewCard(context),
+        ],
+      ),
+    );
+  }
+
+  /// Compact, low-profile navigation bar shown at the bottom during active route navigation.
+  /// Prevents covering the map while keeping essential controls and ETA accessible.
+  Widget _buildCompactNavigationBottomBar(BuildContext context) {
+    return Positioned(
+      left: 14,
+      right: 14,
+      bottom: 12,
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: _selectedTransportMode.routeColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              _selectedDestination!.imageUrl,
-                              width: 74,
-                              height: 74,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                width: 74,
-                                height: 74,
-                                color: AppColors.primary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                child: const Icon(
-                                  Icons.place_rounded,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.getCategoryColor(
-                                          _selectedDestination!.category,
-                                        ).withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        _selectedDestination!.category,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.getCategoryColor(
-                                            _selectedDestination!.category,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(
-                                      Icons.star_rounded,
-                                      size: 14,
-                                      color: Colors.amber,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      _selectedDestination!.rating
-                                          .toStringAsFixed(1),
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      icon: const Icon(
-                                        Icons.close_rounded,
-                                        size: 18,
-                                      ),
-                                      onPressed: () => setState(
-                                        () => _selectedDestination = null,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _selectedDestination!.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                if (_userLocation != null)
-                                  Text(
-                                    'Jarak Garis Lurus: ${_locationService.formatDistance(_locationService.calculateDistanceInKm(_userLocation!, _selectedDestination!.coordinates))}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  )
-                                else
-                                  Text(
-                                    _selectedDestination!.address,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondaryLight,
-                                    ),
-                                  ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _selectedDestination!.estimatedPrice <= 0
-                                      ? 'Gratis / Tanpa Tiket'
-                                      : currencyFormatter.format(
-                                          _selectedDestination!.estimatedPrice,
-                                        ),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                child: Icon(
+                  _selectedTransportMode.icon,
+                  size: 18,
+                  color: _selectedTransportMode.routeColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _selectedDestination!.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 10),
-                      // Transportation Mode Selector Chips in Bottom Card
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 8),
-                        child: Row(
-                          children: TransportMode.values.map((m) {
-                            final isSelected = m == _selectedTransportMode;
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: () => _onTransportModeChanged(m),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? m.routeColor
-                                          : m.routeColor.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? m.routeColor
-                                            : m.routeColor.withValues(alpha: 0.25),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          m.icon,
-                                          size: 13,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : m.routeColor,
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          m.label,
-                                          style: TextStyle(
-                                            fontSize: 9.5,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            color: isSelected
-                                                ? Colors.white
-                                                : m.routeColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      _currentRouteDetails != null
+                          ? '${_currentRouteDetails!.formattedDistance} • ${_currentRouteDetails!.formattedDuration}'
+                          : 'Menghitung rute...',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _selectedTransportMode.routeColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DestinationDetailScreen(
+                        destination: _selectedDestination!,
+                      ),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Detail', style: TextStyle(fontSize: 11.5)),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _isNavigating = false;
+                    _currentRoutePoints = [];
+                    _currentRouteDetails = null;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.close_rounded, size: 14),
+                    SizedBox(width: 3),
+                    Text('Selesai', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 2),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  size: 18,
+                  color: Colors.grey.shade600,
+                ),
+                tooltip: 'Opsi Peta Luar',
+                onSelected: (val) {
+                  if (val == 'external') {
+                    MapService.openExternalMapNavigation(
+                      latitude: _selectedDestination!.latitude,
+                      longitude: _selectedDestination!.longitude,
+                      destinationName: _selectedDestination!.name,
+                      mode: _selectedTransportMode,
+                    );
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'external',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.open_in_new_rounded,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Buka di Google Maps Eksternal',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact destination preview card shown when a pin is selected before navigating.
+  Widget _buildDestinationPreviewCard(BuildContext context) {
+    return Positioned(
+      left: 14,
+      right: 14,
+      bottom: 14,
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      _selectedDestination!.imageUrl,
+                      width: 66,
+                      height: 66,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 66,
+                        height: 66,
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        child: const Icon(
+                          Icons.place_rounded,
+                          color: AppColors.primary,
                         ),
                       ),
-                      // Vehicle restriction / constraint note
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: _selectedTransportMode.routeColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _selectedTransportMode.routeColor.withValues(alpha: 0.22),
-                          ),
-                        ),
-                        child: Row(
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Icon(
-                              _selectedTransportMode.icon,
-                              size: 13,
-                              color: _selectedTransportMode.routeColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.getCategoryColor(
+                                  _selectedDestination!.category,
+                                ).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                               child: Text(
-                                _selectedTransportMode.vehicleConstraintNote,
+                                _selectedDestination!.category,
                                 style: TextStyle(
                                   fontSize: 9.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: _selectedTransportMode.routeColor,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.getCategoryColor(
+                                    _selectedDestination!.category,
+                                  ),
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Spacer(),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              _selectedDestination!.rating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                              ),
+                              onPressed: () => setState(
+                                () => _selectedDestination = null,
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _selectedDestination!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        if (_userLocation != null)
+                          Text(
+                            'Jarak Garis Lurus: ${_locationService.formatDistance(_locationService.calculateDistanceInKm(_userLocation!, _selectedDestination!.coordinates))}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        else
+                          Text(
+                            _selectedDestination!.address,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondaryLight,
+                            ),
+                          ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _selectedDestination!.estimatedPrice <= 0
+                              ? 'Gratis / Tanpa Tiket'
+                              : currencyFormatter.format(
+                                  _selectedDestination!.estimatedPrice,
+                                ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DestinationDetailScreen(
+                              destination: _selectedDestination!,
+                            ),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        DestinationDetailScreen(
-                                      destination: _selectedDestination!,
-                                    ),
-                                  ),
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: const Text(
-                                'Buka Detail',
-                                style: TextStyle(fontSize: 12),
-                              ),
+                      child: const Text(
+                        'Buka Detail',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isNavigating = true;
+                        });
+                        _fetchRoute();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Panduan rute ${_selectedTransportMode.label} aktif menuju ${_selectedDestination!.name}',
                             ),
+                            backgroundColor: _selectedTransportMode.routeColor,
+                            duration: const Duration(seconds: 2),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _isNavigating = !_isNavigating;
-                                });
-                                if (_isNavigating &&
-                                    _selectedDestination != null) {
-                                  _fetchRoute();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Panduan rute ${_selectedTransportMode.label} aktif menuju ${_selectedDestination!.name}',
-                                      ),
-                                      backgroundColor: _selectedTransportMode.routeColor,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                } else {
-                                  setState(() {
-                                    _currentRoutePoints = [];
-                                    _currentRouteDetails = null;
-                                  });
-                                }
-                              },
-                              icon: Icon(
-                                _isNavigating
-                                    ? Icons.close_rounded
-                                    : _selectedTransportMode.icon,
-                                size: 15,
-                              ),
-                              label: Text(
-                                _isNavigating
-                                    ? 'Hentikan Rute'
-                                    : 'Mulai (${_selectedTransportMode.label})',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                backgroundColor: _isNavigating
-                                    ? Colors.red.shade700
-                                    : _selectedTransportMode.routeColor,
-                                foregroundColor: Colors.white,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
+                        );
+                      },
+                      icon: const Icon(Icons.directions_rounded, size: 16),
+                      label: const Text(
+                        'Petunjuk Rute',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    tooltip: 'Opsi Peta Luar',
+                    onSelected: (val) {
+                      if (val == 'external') {
+                        MapService.openExternalMapNavigation(
+                          latitude: _selectedDestination!.latitude,
+                          longitude: _selectedDestination!.longitude,
+                          destinationName: _selectedDestination!.name,
+                          mode: _selectedTransportMode,
+                        );
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'external',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.open_in_new_rounded,
+                              size: 14,
+                              color: Colors.grey,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          PopupMenuButton<String>(
-                            icon: Icon(
-                              Icons.more_vert_rounded,
-                              size: 18,
-                              color: _selectedTransportMode.routeColor,
+                            SizedBox(width: 8),
+                            Text(
+                              'Buka di Google Maps Eksternal',
+                              style: TextStyle(fontSize: 11),
                             ),
-                            tooltip: 'Opsi Peta Luar',
-                            onSelected: (val) {
-                              if (val == 'external') {
-                                MapService.openExternalMapNavigation(
-                                  latitude: _selectedDestination!.latitude,
-                                  longitude: _selectedDestination!.longitude,
-                                  destinationName: _selectedDestination!.name,
-                                  mode: _selectedTransportMode,
-                                );
-                              }
-                            },
-                            itemBuilder: (ctx) => [
-                              const PopupMenuItem(
-                                value: 'external',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.open_in_new_rounded,
-                                      size: 14,
-                                      color: Colors.grey,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Buka di Google Maps Eksternal',
-                                      style: TextStyle(fontSize: 11),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2085,361 +2137,171 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return StreamBuilder<CompassOrientation>(
-              stream: _sensorService.orientationStream,
-              initialData: _sensorService.currentOrientation,
-              builder: (context, snapshot) {
-                final orientation =
-                    snapshot.data ?? _sensorService.currentOrientation;
+        return StreamBuilder<CompassOrientation>(
+          stream: _sensorService.orientationStream,
+          initialData: _sensorService.currentOrientation,
+          builder: (context, snapshot) {
+            final orientation =
+                snapshot.data ?? _sensorService.currentOrientation;
 
-                return Material(
-                  color: AppColors.getCardColor(context),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(24)),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 20,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+            return Material(
+              color: AppColors.getCardColor(context),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header: Cukup Kompas saja
+                      Row(
                         children: [
-                          // Header
-                          Row(
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primary.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.explore_rounded,
+                              color: AppColors.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Kompas',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+
+                      // Kompas Dial Sederhana & Mulus
+                      CompassDialWidget(
+                        heading: orientation.heading,
+                        destBearing: destBearing,
+                        size: 190,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Derajat & Arah Mata Angin
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${orientation.heading.toInt()}°',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Text(
+                              '${orientation.cardinalLabel} (${orientation.cardinalDirection})',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Panduan arah destinasi terpilih (jika ada)
+                      if (_selectedDestination != null &&
+                          destBearing != null) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.secondary.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.secondary
+                                  .withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.12),
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.secondary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.explore_rounded,
-                                  color: AppColors.primary,
-                                  size: 24,
+                                  Icons.near_me_rounded,
+                                  color: Colors.white,
+                                  size: 16,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Kompas & Orientasi Real-Time',
-                                      style: TextStyle(
-                                        fontSize: 16,
+                                    Text(
+                                      'Arah Menuju ${_selectedDestination!.name}:',
+                                      style: const TextStyle(
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.greenAccent,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Sensor aktif • Bergerak real-time',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColors.getTextSecondary(
-                                                context),
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Azimuth ${destBearing.toInt()}° (${SensorService.getCardinalDirection(destBearing).label})',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.getTextSecondary(
+                                            context),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () => Navigator.pop(ctx),
-                              ),
                             ],
                           ),
-                          const Divider(height: 20),
-
-                          // Large Live Animated Compass Dial
-                          CompassDialWidget(
-                            heading: orientation.heading,
-                            destBearing: destBearing,
-                            size: 165,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Heading Degree Readout
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '${orientation.heading.toInt()}°',
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.25),
-                                  ),
-                                ),
-                                child: Text(
-                                  '${orientation.cardinalLabel} (${orientation.cardinalDirection})',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Pitch & Roll Sensor Metrics Cards
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.getSurfaceColor(context),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.getBorderColor(context),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Kemiringan Pitch',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.getTextSecondary(
-                                              context),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            '${orientation.pitch.toStringAsFixed(1)}°',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.swap_vert_rounded,
-                                            size: 16,
-                                            color: AppColors.getTextSecondary(
-                                                context),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.getSurfaceColor(context),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: AppColors.getBorderColor(context),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Kemiringan Roll',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.getTextSecondary(
-                                              context),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            '${orientation.roll.toStringAsFixed(1)}°',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          Icon(
-                                            Icons.swap_horiz_rounded,
-                                            size: 16,
-                                            color: AppColors.getTextSecondary(
-                                                context),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          // If destination selected, display live guide relative to compass heading
-                          if (_selectedDestination != null &&
-                              destBearing != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color:
-                                    AppColors.secondary.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.secondary
-                                      .withValues(alpha: 0.35),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.secondary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.near_me_rounded,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Menuju ${_selectedDestination!.name}:',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Azimuth ${destBearing.toInt()}° (${SensorService.getCardinalDirection(destBearing).label}) • Indikator titik pada kompas',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.getTextSecondary(
-                                                context),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 18),
-
-                          // Action Buttons: Follow Mode / Reset North
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    _mapController.rotate(0);
-                                    setState(
-                                        () => _isCompassFollowMode = false);
-                                    setSheetState(() {});
-                                    Navigator.pop(ctx);
-                                  },
-                                  icon: const Icon(Icons.north_rounded,
-                                      size: 16),
-                                  label: const Text('Reset Utara'),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final newMode = !_isCompassFollowMode;
-                                    setState(() {
-                                      _isCompassFollowMode = newMode;
-                                    });
-                                    setSheetState(() {});
-                                    if (newMode) {
-                                      _mapController
-                                          .rotate(orientation.heading);
-                                    } else {
-                                      _mapController.rotate(0);
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isCompassFollowMode
-                                        ? AppColors.primary
-                                        : null,
-                                    foregroundColor: _isCompassFollowMode
-                                        ? Colors.white
-                                        : null,
-                                  ),
-                                  icon: Icon(
-                                    _isCompassFollowMode
-                                        ? Icons.check_circle_rounded
-                                        : Icons.sync_rounded,
-                                    size: 16,
-                                  ),
-                                  label: Text(
-                                    _isCompassFollowMode
-                                        ? 'Mode Putar Aktif'
-                                        : 'Putar Peta Otomatis',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         );

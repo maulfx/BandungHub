@@ -54,13 +54,13 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
         final itineraries = _repository.itineraries;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Rencana Perjalanan (Itinerary)')),
+          appBar: AppBar(title: const Text('Rencana Perjalanan')),
           body: itineraries.isEmpty
               ? EmptyView(
                   icon: Icons.calendar_today_rounded,
                   title: 'Belum Ada Rencana Perjalanan',
                   message: 'Susun jadwal liburan ke Bandung, kelompokkan destinasi per hari, dan hitung estimasi biaya secara otomatis.',
-                  buttonText: 'Buat Itinerary Pertama',
+                  buttonText: 'Buat Rencana Pertama',
                   onButtonPressed: _openCreateScreen,
                 )
               : ListView.builder(
@@ -205,7 +205,7 @@ class _ItineraryScreenState extends State<ItineraryScreen> {
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Buat Itinerary'),
+            label: const Text('Buat Rencana Baru'),
           ),
         );
       },

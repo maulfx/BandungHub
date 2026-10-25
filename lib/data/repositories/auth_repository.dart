@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/user_profile.dart';
 import '../../services/biometric_service.dart';
+import '../../services/supabase_service.dart';
 import '../local/auth_storage.dart';
 
 class AuthRepository extends ChangeNotifier {
@@ -70,6 +71,46 @@ class AuthRepository extends ChangeNotifier {
       final cleanEmail = email.trim().toLowerCase();
       final passHash = UserProfile.hashSecret(password);
 
+      // 1. Coba autentikasi via Supabase Cloud Auth jika terhubung
+      final sb = SupabaseService().client;
+      if (sb != null) {
+        try {
+          final authRes = await sb.auth.signInWithPassword(
+            email: cleanEmail,
+            password: password,
+          );
+          if (authRes.user != null) {
+            final sbUser = authRes.user!;
+            final registered = await _storage.getRegisteredUsers();
+            var user = registered[cleanEmail];
+            user ??= UserProfile(
+              id: sbUser.id,
+              name: (sbUser.userMetadata?['name'] as String?) ??
+                  cleanEmail.split('@').first,
+              email: cleanEmail,
+              createdAt:
+                  DateTime.tryParse(sbUser.createdAt) ?? DateTime.now(),
+              lastLoginAt: DateTime.now(),
+            );
+            _currentUser = user.copyWith(lastLoginAt: DateTime.now());
+            await _storage.savePasswordHash(cleanEmail, passHash);
+            await _storage.saveCurrentUser(_currentUser!);
+            if (_currentUser!.isBiometricEnabled) {
+              await _storage.saveBiometricUserEmail(_currentUser!.email);
+            }
+            _isSessionUnlocked = true;
+            _isLoading = false;
+            notifyListeners();
+            return true;
+          }
+        } catch (e) {
+          debugPrint(
+            'ℹ️ [Supabase Auth] Login cloud fallback: $e (memverifikasi database lokal)',
+          );
+        }
+      }
+
+      // 2. Verifikasi offline lokal (SQLite & Secure Storage)
       final isValid = await _storage.verifyPassword(cleanEmail, passHash);
       if (!isValid) {
         _isLoading = false;
@@ -129,8 +170,27 @@ class AuthRepository extends ChangeNotifier {
           ? UserProfile.hashSecret(pin)
           : null;
 
+      String userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+
+      // 1. Daftarkan akun ke Supabase Cloud Auth jika terhubung
+      final sb = SupabaseService().client;
+      if (sb != null) {
+        try {
+          final authRes = await sb.auth.signUp(
+            email: cleanEmail,
+            password: password,
+            data: {'name': name.trim()},
+          );
+          if (authRes.user != null) {
+            userId = authRes.user!.id;
+          }
+        } catch (e) {
+          debugPrint('ℹ️ [Supabase Auth] Register cloud notice: $e');
+        }
+      }
+
       final newUser = UserProfile(
-        id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+        id: userId,
         name: name.trim(),
         email: cleanEmail,
         pinHash: pinHash,
@@ -369,6 +429,12 @@ class AuthRepository extends ChangeNotifier {
 
   // Logout
   Future<void> logout() async {
+    final sb = SupabaseService().client;
+    if (sb != null) {
+      try {
+        await sb.auth.signOut();
+      } catch (_) {}
+    }
     await _storage.clearSession();
     _currentUser = null;
     _isSessionUnlocked = false;

@@ -78,7 +78,7 @@ class _CreateItineraryScreenState extends State<CreateItineraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buat Itinerary Baru')),
+      appBar: AppBar(title: const Text('Buat Rencana Perjalanan')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -103,7 +103,7 @@ class _CreateItineraryScreenState extends State<CreateItineraryScreen> {
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return 'Judul itinerary wajib diisi';
+                    return 'Judul rencana perjalanan wajib diisi';
                   }
                   return null;
                 },
@@ -318,7 +318,7 @@ class _CreateItineraryScreenState extends State<CreateItineraryScreen> {
                         )
                       : const Icon(Icons.check_circle_outline_rounded),
                   label: Text(
-                    _isLoading ? 'Menyimpan...' : 'Simpan & Buka Itinerary',
+                    _isLoading ? 'Menyimpan...' : 'Simpan & Buka Rencana',
                   ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),

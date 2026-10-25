@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../sources/bandung_destinations.dart';
 import '../../models/destination.dart';
 import '../../services/supabase_service.dart';
+import 'auth_repository.dart';
 
 enum DestinationSortBy {
   popular, // Rating highest
@@ -30,18 +32,49 @@ class DestinationRepository extends ChangeNotifier {
       try {
         final cloud = await sb.fetchDestinations();
         if (cloud.isNotEmpty) {
-          final Map<String, Destination> merged = {
-            for (final d in BandungDestinations.list) d.id: d,
-          };
-          for (final c in cloud) {
-            merged[c.id] = c;
-          }
+          // Ketika terhubung ke Supabase, gunakan murni data dari Supabase Cloud
           _allDestinations.clear();
-          _allDestinations.addAll(merged.values);
+          _allDestinations.addAll(cloud);
           notifyListeners();
         }
+
+        // Ambil favorit user murni dari cloud jika user aktif
+        final user = AuthRepository().currentUser;
+        if (user != null) {
+          final cloudFavs = await sb.fetchFavorites(user.id);
+          _favoriteIds.clear();
+          _favoriteIds.addAll(cloudFavs);
+          notifyListeners();
+        }
+        return;
       } catch (e) {
         debugPrint('Fetch cloud destinations error: $e');
+      }
+    }
+
+    // Fallback lokal hanya digunakan jika Supabase tidak aktif / offline
+    if (_allDestinations.isEmpty) {
+      _allDestinations.addAll(BandungDestinations.list);
+      notifyListeners();
+    }
+  }
+
+  /// Bersihkan data lokal dan paksa muat ulang murni dari Supabase Cloud
+  Future<void> refreshFromCloud() async {
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      final cloud = await sb.fetchDestinations();
+      if (cloud.isNotEmpty) {
+        _allDestinations.clear();
+        _allDestinations.addAll(cloud);
+        notifyListeners();
+      }
+      final user = AuthRepository().currentUser;
+      if (user != null) {
+        final cloudFavs = await sb.fetchFavorites(user.id);
+        _favoriteIds.clear();
+        _favoriteIds.addAll(cloudFavs);
+        notifyListeners();
       }
     }
   }
@@ -49,12 +82,23 @@ class DestinationRepository extends ChangeNotifier {
   bool isFavorite(String id) => _favoriteIds.contains(id);
 
   void toggleFavorite(String id) {
-    if (_favoriteIds.contains(id)) {
+    final willFav = !_favoriteIds.contains(id);
+    if (!willFav) {
       _favoriteIds.remove(id);
     } else {
       _favoriteIds.add(id);
     }
     notifyListeners();
+
+    final sb = SupabaseService();
+    final user = AuthRepository().currentUser;
+    if (sb.isInitialized && user != null) {
+      unawaited(sb.toggleFavorite(
+        userId: user.id,
+        destinationId: id,
+        isFav: willFav,
+      ));
+    }
   }
 
   Destination? getDestinationById(String id) {

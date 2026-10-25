@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/sync_queue_item.dart';
 import '../../services/network_connectivity_service.dart';
 import '../sources/bandung_destinations.dart';
+import 'destination_repository.dart';
 import 'itinerary_repository.dart';
 import 'review_repository.dart';
 
@@ -293,7 +294,9 @@ class OfflineSyncRepository extends ChangeNotifier {
 
   /// Get cache storage statistics for BandungHub
   Map<String, dynamic> getCacheStats() {
-    final totalDestinations = BandungDestinations.list.length;
+    final totalDestinations = DestinationRepository().allDestinations.isNotEmpty
+        ? DestinationRepository().allDestinations.length
+        : BandungDestinations.list.length;
     final totalReviews = ReviewRepository().reviews.length;
     final totalItineraries = ItineraryRepository().itineraries.length;
 

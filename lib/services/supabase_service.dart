@@ -233,11 +233,11 @@ class SupabaseService {
     if (sb == null) return [];
 
     try {
-      final List<dynamic> response = await sb
-          .from('destination_reviews')
-          .select()
-          .eq('destination_id', destinationId)
-          .order('created_at', ascending: false);
+      final dynamic query = destinationId.trim().isNotEmpty
+          ? sb.from('destination_reviews').select().eq('destination_id', destinationId)
+          : sb.from('destination_reviews').select();
+
+      final List<dynamic> response = await query.order('created_at', ascending: false);
 
       return response.map((row) {
         final map = Map<String, dynamic>.from(row as Map);

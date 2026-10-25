@@ -23,6 +23,12 @@ class DestinationReviewsSection extends StatefulWidget {
 class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
   final _reviewRepo = ReviewRepository();
 
+  @override
+  void initState() {
+    super.initState();
+    _reviewRepo.fetchDestinationReviewsFromCloud(widget.destination.id);
+  }
+
   void _openSubmitReviewSheet(BuildContext context) {
     double selectedRating = 5.0;
     final nameController = TextEditingController(text: 'Wisatawan Bandung');

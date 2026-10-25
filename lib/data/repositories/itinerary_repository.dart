@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../models/destination.dart';
 import '../../models/itinerary.dart';
+import '../../services/supabase_service.dart';
 import '../local/itinerary_storage.dart';
+import 'auth_repository.dart';
 
 class ItineraryRepository extends ChangeNotifier {
   static final ItineraryRepository _instance = ItineraryRepository._internal();
@@ -23,10 +26,33 @@ class ItineraryRepository extends ChangeNotifier {
   }
 
   Future<void> loadItineraries() async {
+    final sb = SupabaseService();
+    final user = AuthRepository().currentUser;
+    if (sb.isInitialized && user != null) {
+      try {
+        final cloudList = await sb.fetchUserItineraries(user.id);
+        // Ketika terhubung ke Supabase, gunakan murni rencana perjalanan dari Cloud
+        _itineraries.clear();
+        _itineraries.addAll(cloudList);
+        notifyListeners();
+        return;
+      } catch (e) {
+        debugPrint('Fetch cloud itineraries error: $e');
+      }
+    }
+
     final list = await _storage.getAllItineraries();
     _itineraries.clear();
     _itineraries.addAll(list);
     notifyListeners();
+  }
+
+  /// Bersihkan database lokal rencana perjalanan agar murni memuat dari Cloud
+  Future<void> clearLocalItineraries() async {
+    await _storage.clearAll();
+    _itineraries.clear();
+    notifyListeners();
+    await loadItineraries();
   }
 
   Itinerary? getItineraryById(String id) {
@@ -65,6 +91,15 @@ class ItineraryRepository extends ChangeNotifier {
     _itineraries.insert(0, newItinerary);
     await _storage.saveItinerary(newItinerary);
     notifyListeners();
+
+    // Sinkronisasi otomatis ke Supabase
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      final user = AuthRepository().currentUser;
+      final userId = user?.id ?? 'user_local';
+      unawaited(sb.upsertItinerary(newItinerary, userId: userId));
+    }
+
     return newItinerary;
   }
 
@@ -78,12 +113,24 @@ class ItineraryRepository extends ChangeNotifier {
     }
     await _storage.saveItinerary(updated);
     notifyListeners();
+
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      final user = AuthRepository().currentUser;
+      final userId = user?.id ?? 'user_local';
+      unawaited(sb.upsertItinerary(updated, userId: userId));
+    }
   }
 
   Future<void> deleteItinerary(String id) async {
     _itineraries.removeWhere((it) => it.id == id);
     await _storage.deleteItinerary(id);
     notifyListeners();
+
+    final sb = SupabaseService();
+    if (sb.isInitialized) {
+      unawaited(sb.deleteItinerary(id));
+    }
   }
 
   Future<void> addDestinationToItinerary({

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/repositories/destination_repository.dart';
 import '../../../data/sources/bandung_destinations.dart';
 import '../../../models/destination.dart';
 import '../../../shared/widgets/destination_card.dart';
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedCategory = 'Semua';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final DestinationRepository _destinationRepo = DestinationRepository();
 
   // Demonstration state toggles for testing criteria
   bool _isLoading = false;
@@ -45,13 +47,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _destinationRepo.addListener(_onDestinationsChanged);
     _loadPersonalizedRecommendations();
+  }
+
+  void _onDestinationsChanged() {
+    if (mounted) {
+      _loadPersonalizedRecommendations();
+      setState(() {});
+    }
   }
 
   Future<void> _loadPersonalizedRecommendations() async {
     final pref = await PreferenceRepository().getPreference();
+    final source = _destinationRepo.allDestinations.isNotEmpty
+        ? _destinationRepo.allDestinations
+        : BandungDestinations.list;
     final results = RecommendationEngine.getRecommendations(
-      destinations: BandungDestinations.list,
+      destinations: source,
       preference: pref,
     );
     if (mounted) {
@@ -74,12 +87,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _destinationRepo.removeListener(_onDestinationsChanged);
     _searchController.dispose();
     super.dispose();
   }
 
   List<Destination> get _filteredDestinations {
-    return BandungDestinations.list.where((item) {
+    final source = _destinationRepo.allDestinations.isNotEmpty
+        ? _destinationRepo.allDestinations
+        : BandungDestinations.list;
+    return source.where((item) {
       final matchesCategory =
           _selectedCategory == 'Semua' ||
           item.category.toLowerCase() == _selectedCategory.toLowerCase();
@@ -683,33 +700,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Rekomendasi Untuk Kamu',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.getTextPrimary(context),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF059669).withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'AI Match',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF059669),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  'Rekomendasi Untuk Kamu',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.getTextPrimary(context),
+                                  ),
                                 ),
                                 Text(
                                   'Sesuai selera ${_userPreference.preferredCategories.join(", ")} • Budget ≤ Rp ${_userPreference.maxBudgetPerPerson.toInt()}',
@@ -787,9 +784,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ListView.builder(
                         padding: const EdgeInsets.only(left: 20),
                         scrollDirection: Axis.horizontal,
-                        itemCount: BandungDestinations.list.take(5).length,
+                        itemCount: (_destinationRepo.allDestinations.isNotEmpty
+                                ? _destinationRepo.allDestinations
+                                : BandungDestinations.list)
+                            .take(5)
+                            .length,
                         itemBuilder: (context, index) {
-                          final item = BandungDestinations.list[index];
+                          final popularList = (_destinationRepo.allDestinations.isNotEmpty
+                                  ? _destinationRepo.allDestinations
+                                  : BandungDestinations.list)
+                              .take(5)
+                              .toList();
+                          final item = popularList[index];
                           return DestinationCard(
                             destination: item,
                             onTap: () => _showDestinationDetails(item),

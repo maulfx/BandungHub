@@ -469,8 +469,8 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
 
         if (itinerary == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Detail Itinerary')),
-            body: const Center(child: Text('Itinerary tidak ditemukan')),
+            appBar: AppBar(title: const Text('Detail Rencana Perjalanan')),
+            body: const Center(child: Text('Rencana perjalanan tidak ditemukan')),
           );
         }
 
@@ -486,7 +486,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             actions: [
               IconButton(
                 key: const Key('btn_itinerary_export_action'),
-                tooltip: 'Ekspor & Bagikan',
+                tooltip: 'Bagikan Rencana',
                 icon: const Icon(Icons.share_rounded),
                 onPressed: () => ItineraryExportSheet.show(
                   context,
@@ -512,7 +512,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Hapus Itinerary?'),
+                        title: const Text('Hapus Rencana Perjalanan?'),
                         content: Text(
                           'Apakah Anda yakin ingin menghapus "${itinerary.title}"?',
                         ),
@@ -560,7 +560,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                           color: AppColors.primary,
                         ),
                         SizedBox(width: 8),
-                        Text('Ekspor & Bagikan'),
+                        Text('Bagikan Rencana Perjalanan'),
                       ],
                     ),
                   ),
@@ -603,7 +603,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          'Hapus Itinerary',
+                          'Hapus Rencana Perjalanan',
                           style: TextStyle(color: AppColors.error),
                         ),
                       ],
@@ -836,7 +836,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                             itinerary,
                           ),
                           icon: const Icon(Icons.share_rounded, size: 18),
-                          label: const Text('Bagikan & Ekspor Itinerary'),
+                          label: const Text('Bagikan Rencana Perjalanan'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,

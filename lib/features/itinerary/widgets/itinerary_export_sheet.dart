@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../models/itinerary.dart';
 import '../../../services/itinerary_export_service.dart';
 
-/// Modal Bottom Sheet untuk Ekspor & Berbagi Itinerary
-/// Menghadirkan 3 format: Plain Text (WhatsApp/Chat), Dokumen Cetak/PDF, dan JSON Backup
+/// Modal Bottom Sheet untuk Membagikan Itinerary
+/// Menghadirkan 2 pilihan praktis: Bagikan Catatan Teks (WhatsApp/Chat) atau Dokumen PDF
 class ItineraryExportSheet extends StatefulWidget {
   final Itinerary itinerary;
 
@@ -27,11 +28,12 @@ class ItineraryExportSheet extends StatefulWidget {
 class _ItineraryExportSheetState extends State<ItineraryExportSheet>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isSharingPdf = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -40,30 +42,55 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
     super.dispose();
   }
 
-  void _showCopiedSnackbar(String label) {
+  void _showSnackbar({
+    required String message,
+    required bool isSuccess,
+    IconData? icon,
+  }) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            Icon(
+              icon ?? (isSuccess ? Icons.check_circle_rounded : Icons.error_outline_rounded),
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
-            Expanded(child: Text('$label berhasil disalin ke clipboard!')),
+            Expanded(child: Text(message)),
           ],
         ),
-        backgroundColor: AppColors.success,
+        backgroundColor: isSuccess ? AppColors.success : AppColors.error,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
+  Future<void> _sharePdf(Itinerary itinerary) async {
+    if (_isSharingPdf) return;
+
+    setState(() => _isSharingPdf = true);
+
+    try {
+      await ItineraryExportService.shareItineraryPdf(itinerary);
+    } catch (e) {
+      _showSnackbar(
+        message: 'Gagal membagikan PDF: $e',
+        isSuccess: false,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSharingPdf = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final itinerary = widget.itinerary;
     final plainText = ItineraryExportService.generatePlainText(itinerary);
-    final jsonText = ItineraryExportService.generateJsonExport(itinerary);
-    final htmlText = ItineraryExportService.generateHtmlDocument(itinerary);
 
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.85;
@@ -113,7 +140,7 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Ekspor & Bagikan Itinerary',
+                        'Bagikan Rencana Perjalanan',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -139,7 +166,7 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
             ),
           ),
 
-          // Tab Bar
+          // Pilihan Format: Catatan atau PDF
           TabBar(
             controller: _tabController,
             labelColor: AppColors.primary,
@@ -148,16 +175,12 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
             indicatorWeight: 3,
             tabs: const [
               Tab(
-                icon: Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                text: 'WhatsApp / Teks',
+                icon: Icon(Icons.notes_rounded, size: 20),
+                text: 'Bagikan Catatan',
               ),
               Tab(
-                icon: Icon(Icons.description_outlined, size: 18),
-                text: 'Dokumen',
-              ),
-              Tab(
-                icon: Icon(Icons.code_rounded, size: 18),
-                text: 'JSON Backup',
+                icon: Icon(Icons.picture_as_pdf_rounded, size: 20),
+                text: 'Dokumen PDF',
               ),
             ],
           ),
@@ -167,14 +190,11 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Tab 1: Plain text / WhatsApp
-                _buildPlainTextTab(plainText, itinerary),
+                // Pilihan 1: Bagikan Catatan
+                _buildNotesTab(plainText, itinerary),
 
-                // Tab 2: Document / Printable preview
-                _buildDocumentTab(htmlText, itinerary),
-
-                // Tab 3: JSON Backup
-                _buildJsonTab(jsonText, itinerary),
+                // Pilihan 2: Dokumen PDF
+                _buildPdfTab(itinerary),
               ],
             ),
           ),
@@ -183,7 +203,8 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
     );
   }
 
-  Widget _buildPlainTextTab(String plainText, Itinerary itinerary) {
+  /// Tampilan Pilihan 1: Bagikan Catatan
+  Widget _buildNotesTab(String plainText, Itinerary itinerary) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -196,11 +217,15 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
             ),
             child: const Row(
               children: [
-                Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Format teks ini dioptimalkan untuk dibagikan ke grup WhatsApp atau media perpesanan.',
+                    'Format catatan rapi berisi jadwal & rincian biaya, cocok untuk dibagikan ke WhatsApp atau aplikasi catatan.',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -236,10 +261,13 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
                   key: const Key('btn_copy_plain_text'),
                   onPressed: () async {
                     await ItineraryExportService.copyToClipboard(plainText);
-                    _showCopiedSnackbar('Teks itinerary');
+                    _showSnackbar(
+                      message: 'Catatan itinerary berhasil disalin ke clipboard!',
+                      isSuccess: true,
+                    );
                   },
                   icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Salin Teks'),
+                  label: const Text('Salin Catatan'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -274,47 +302,68 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
     );
   }
 
-  Widget _buildDocumentTab(String htmlText, Itinerary itinerary) {
+  /// Tampilan Pilihan 2: Dokumen PDF
+  Widget _buildPdfTab(Itinerary itinerary) {
+    final endDate = itinerary.startDate.add(
+      Duration(days: itinerary.durationDays - 1),
+    );
+
+    final formattedBudget = 'Rp ${itinerary.totalEstimatedBudget.toInt().toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+        )}';
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.getCardColor(context),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.getBorderColor(context)),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // PDF Preview Header Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.getCardColor(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.getBorderColor(context)),
+                    ),
+                    child: Row(
                       children: [
-                        const Icon(
-                          Icons.picture_as_pdf_rounded,
-                          color: Colors.redAccent,
-                          size: 26,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.picture_as_pdf_rounded,
+                            color: Colors.redAccent,
+                            size: 32,
+                          ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                itinerary.title,
+                                '${itinerary.title}.pdf',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const Text(
-                                'Dokumen Ringkas Siap Cetak & Simpan',
+                              const SizedBox(height: 3),
+                              Text(
+                                'Dokumen A4 Siap Simpan & Cetak',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey,
+                                  color: AppColors.getTextSecondary(context),
                                 ),
                               ),
                             ],
@@ -322,69 +371,94 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
                         ),
                       ],
                     ),
-                    const Divider(height: 24),
-                    Text(
-                      'Durasi: ${itinerary.durationDays} Hari (${itinerary.numberOfPeople} Orang)',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Ringkasan Isi PDF
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.getCardColor(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.getBorderColor(context)),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Total Destinasi: ${itinerary.items.length} Tempat Wisata',
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Estimasi Total Biaya:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Rp ${itinerary.totalEstimatedBudget.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Pratinjau Kode Dokumen (HTML):',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 130,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: SingleChildScrollView(
-                        child: Text(
-                          htmlText,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Ringkasan Dokumen:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        _buildPdfInfoRow(
+                          icon: Icons.calendar_today_rounded,
+                          label: 'Periode',
+                          value:
+                              '${itinerary.durationDays} Hari (${AppDateUtils.formatDate(itinerary.startDate)} - ${AppDateUtils.formatDate(endDate)})',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPdfInfoRow(
+                          icon: Icons.people_outline_rounded,
+                          label: 'Jumlah Tamu',
+                          value: '${itinerary.numberOfPeople} Orang',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPdfInfoRow(
+                          icon: Icons.place_outlined,
+                          label: 'Destinasi',
+                          value: '${itinerary.items.length} Tempat Wisata Terjadwal',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPdfInfoRow(
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: 'Estimasi Biaya',
+                          value: formattedBudget,
+                          isHighlight: true,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Fitur Dokumen PDF
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.verified_rounded,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Keunggulan Dokumen PDF',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildFeatureBullet('Tabel rincian tiket, transportasi, kuliner, dan logistik'),
+                        _buildFeatureBullet('Jadwal harian rapi per destinasi lengkap beserta catatan'),
+                        _buildFeatureBullet('Format dokumen standar A4 bersih dan siap cetak atau arsip'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -392,15 +466,24 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              key: const Key('btn_copy_html_document'),
-              onPressed: () async {
-                await ItineraryExportService.copyToClipboard(htmlText);
-                _showCopiedSnackbar('Kode dokumen HTML');
-              },
-              icon: const Icon(Icons.print_rounded),
-              label: const Text('Salin Dokumen HTML (Siap Cetak)'),
+              key: const Key('btn_share_pdf'),
+              onPressed: _isSharingPdf ? null : () => _sharePdf(itinerary),
+              icon: _isSharingPdf
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.picture_as_pdf_rounded, size: 20),
+              label: Text(
+                _isSharingPdf ? 'Menyiapkan PDF...' : 'Bagikan PDF',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -414,94 +497,52 @@ class _ItineraryExportSheetState extends State<ItineraryExportSheet>
     );
   }
 
-  Widget _buildJsonTab(String jsonText, Itinerary itinerary) {
+  Widget _buildPdfInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool isHighlight = false,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: isHighlight ? AppColors.primary : Colors.grey),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 12.5,
+            color: AppColors.getTextSecondary(context),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
+              color: isHighlight ? AppColors.primary : AppColors.getTextPrimary(context),
+            ),
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureBullet(String text) {
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.backup_rounded, color: Colors.blue, size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Data JSON ini berisi seluruh struktur itinerary yang dapat diimpor kembali ke BandungHub.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
+          const Text('• ', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.getCardColor(context),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.getBorderColor(context)),
-              ),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  jsonText,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    height: 1.4,
-                  ),
-                ),
-              ),
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 11.5, height: 1.3),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const Key('btn_copy_json_data'),
-                  onPressed: () async {
-                    await ItineraryExportService.copyToClipboard(jsonText);
-                    _showCopiedSnackbar('Data JSON');
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Salin JSON'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              if (itinerary.savedHash != null && itinerary.savedHash!.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    key: const Key('btn_copy_hash'),
-                    onPressed: () async {
-                      await ItineraryExportService.copyToClipboard(
-                        itinerary.savedHash!,
-                      );
-                      _showCopiedSnackbar('Hash SHA-256');
-                    },
-                    icon: const Icon(Icons.security_rounded, size: 18),
-                    label: const Text('Salin Hash'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
           ),
         ],
       ),

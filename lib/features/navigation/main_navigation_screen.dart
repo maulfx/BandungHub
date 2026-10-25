@@ -55,7 +55,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               Icons.calendar_month_rounded,
               color: AppColors.primary,
             ),
-            label: 'Itinerary',
+            label: 'Rencana',
           ),
           NavigationDestination(
             icon: Icon(Icons.sports_esports_outlined),
