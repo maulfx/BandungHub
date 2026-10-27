@@ -57,6 +57,7 @@
 * **Judul Slide:** Solusi: BandungHub Smart Tourism
 * **Poin Utama di Slide:**
   * 🟢 **38 Destinasi Terkurasi Lengkap:** 5 kategori (Sejarah, Alam, Keluarga, Kuliner, Hiburan).
+  * 🟢 **Bandung AI Lens (Multimodal Vision):** Fitur kamera scanner pintar untuk mengenali cagar budaya & landmark Bandung seketika dengan Gemini AI Vision & offline smart fallback.
   * 🟢 **Perencana Perjalanan Cerdas (Itinerary):** Perhitungan estimasi budget (tiket, transport, makan) secara otomatis.
   * 🟢 **Peta & Rute Multi-Moda:** Navigasi interaktif mobil, motor, sepeda, dan jalan kaki + sensor kompas digital halus.
   * 🟢 **Sinkronisasi Cloud & Offline-First:** Berjalan lancar tanpa internet, otomatis tersinkron ke Supabase saat online.
@@ -102,52 +103,56 @@
 
 ---
 
-### Slide 6: Rencana Perjalanan (Itinerary Planner) & Ekspor Dokumen
-* **Judul Slide:** Rencana Perjalanan Pintar & Ekspor Dokumen
+### Slide 6: Rencana Perjalanan Pintar, Konversi Multi-Mata Uang & Zona Waktu
+* **Judul Slide:** Rencana Perjalanan Pintar & Fitur Ramah Wisatawan Global
 * **Poin Utama di Slide:**
-  * **Penyusunan Rencana Harian:** Pengelompokan destinasi berdasarkan hari (Hari 1, Hari 2, dst.) dan jam kunjungan.
-  * **Kalkulator Budget Otomatis:** Menghitung otomatis total tiket, alokasi kuliner, transportasi, dan biaya tambahan per orang.
+  * **Penyusunan Rencana Harian:** Pengelompokan destinasi berdasarkan hari (Hari 1, Hari 2, dst.) dan estimasi jam kunjungan.
+  * **Kalkulator Budget Otomatis & Konversi Multi-Mata Uang:**
+    * 💱 **Dropdown Pilihan Mata Uang (IDR, USD, MYR, SGD, EUR, JPY, AUD, dll.):** Rincian biaya tiket, transportasi, makan, dan total per orang otomatis terkonversi secara instan.
+    * Wisatawan asing (misal turis Malaysia atau Amerika) langsung paham estimasi biaya tanpa perlu keluar aplikasi untuk membuka kalkulator kurs terpisah.
+  * **Sinkronisasi Jadwal Berdasarkan Zona Waktu (Dropdown Selector):**
+    * ⏰ **Pilihan Zona Waktu Asal Wisatawan (WIB, WITA, WIT, SGT/MYT, JST, EST, dll.):**
+    * Jadwal kunjungan di Bandung (WIB/UTC+7) otomatis dikonversikan dan menampilkan perbandingan jam lokal wisatawan sehingga tidak salah jadwal.
   * **Opsi Ekspor Fleksibel:**
     * 📄 **Format PDF Resmi:** Tampilan dokumen rapi siap cetak lengkap dengan tabel rincian biaya dan jadwal.
     * 📝 **Format Catatan Teks:** Teks ringkas yang siap dibagikan via WhatsApp, Telegram, atau aplikasi catatan.
   * **Sinkronisasi Akun Cloud:** Rencana perjalanan tersimpan di Supabase Cloud terikat dengan ID pengguna, aman walau ganti perangkat.
 * **Rekomendasi Visual:**
-  * Mockup layar detail rencana perjalanan bersanding dengan pratinjau dokumen PDF yang dihasilkan.
+  * Mockup layar detail rencana perjalanan menunjukkan dropdown mata uang (USD / MYR) dan banner zona waktu bersanding dengan pratinjau dokumen PDF yang dihasilkan.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Fitur unggulan lainnya adalah Perencana Perjalanan. Pengguna dapat membuat agenda liburan per hari, memilih destinasi yang ingin dikunjungi, dan aplikasi akan secara otomatis menghitung estimasi biaya total per orang. Hasil rencana ini dapat diekspor menjadi dokumen PDF resmi atau dibagikan sebagai catatan teks ke rombongan perjalanan melalui WhatsApp."
+  > "Fitur unggulan lainnya adalah Perencana Perjalanan yang kini dilengkapi fitur terintegrasi ramah wisatawan global. Pengguna dapat memilih mata uang asal seperti USD atau Ringgit Malaysia lewat dropdown interaktif di kartu anggaran, dan seluruh estimasi biaya otomatis terkonversi. Tak hanya itu, wisatawan dari zona waktu berbeda—seperti turis dari Malaysia atau Singapura—dapat memilih zona waktu asalnya lewat dropdown jadwal, sehingga agenda kunjungan di Bandung terkonversi ke jam mereka secara akurat. Semua rencana ini dapat diekspor ke PDF resmi atau dibagikan lewat WhatsApp."
 
 ---
 
-### Slide 7: Peta Interaktif, Navigasi Multi-Moda & Kompas
+### Slide 7: Peta Interaktif, Navigasi Kendaraan (Motor & Mobil) & Kompas
 * **Judul Slide:** Navigasi Geospasial & Kompas Digital
 * **Poin Utama di Slide:**
   * **Peta Interaktif Wisata:** Penandaan marker warna-warni berdasarkan kategori destinasi di peta Bandung.
-  * **Routing Multi-Moda Transportasi:**
-    * 🚗 Mobil (Rute jalan raya utama)
-    * 🛵 Sepeda Motor (Akses rute cepat)
-    * 🚴 Sepeda (Jalur olahraga santai)
-    * 🚶 Pejalan Kaki (Trotoar kota ramah pedestrian)
+  * **Routing Kendaraan Nyata (OpenStreetMap OSRM):**
+    * 🛵 **Sepeda Motor:** Rute non-tol melalui jalan arteri dan jalan pintas alternatif.
+    * 🚗 **Mobil:** Rute jalan protokol utama dan akses jalan tol bebas hambatan.
   * **Kompas Digital Minimalis:**
     * Desain modern, bersih, dan informatif.
     * Didukung algoritma *Low-Pass Sensor Smoothing* agar putaran jarum kompas bergerak mulus tanpa patah-patah.
 * **Rekomendasi Visual:**
   * Screenshot peta navigasi rute di atas dan widget kompas digital di bawah.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Untuk memudahkan mobilitas, BandungHub menyediakan peta interaktif lengkap dengan penunjuk rute multi-moda: mobil, motor, sepeda, dan jalan kaki. Kami juga menyematkan kompas digital dengan algoritma sensor smoothing, sehingga pergerakan jarum kompas saat pengguna mengarahkan HP di alam terbuka bergerak sangat halus dan responsif."
+  > "Untuk memudahkan mobilitas wisatawan, BandungHub menyediakan peta interaktif lengkap dengan penunjuk rute jalan nyata untuk Sepeda Motor dan Mobil. Sistem secara cerdas membedakan rute non-tol untuk motor dan jalan tol untuk mobil. Kami juga menyematkan kompas digital dengan sensor smoothing agar pergerakan arah tetap mulus saat digunakan di lapangan."
 
 ---
 
-### Slide 8: Ulasan Wisatawan & Rekomendasi Cerdas
-* **Judul Slide:** Ulasan Terpercaya & Rekomendasi Berbasis Preferensi
+### Slide 8: Ulasan Wisatawan, Bandung AI Lens & Rekomendasi Cerdas
+* **Judul Slide:** Ulasan Terpercaya, AI Lens & Rekomendasi Pintar
 * **Poin Utama di Slide:**
   * **Sistem Ulasan Real-Time di Supabase:** Pengguna dapat memberikan ulasan, rating bintang 1-5, dan foto pengalaman langsung ke cloud.
+  * **Sinkronisasi Skor & Total Ulasan:** Rating rata-rata kartu utama dan ulasan pengunjung tersinkron 100% transparan secara real-time.
   * **Integritas Ulasan Kriptografis (Cryptographic Hash):** Setiap ulasan diamankan dengan rantai hash anti-manipulasi data (*blockchain-inspired audit ledger*).
-  * **Statistik Riil & Rating Transparan:** Menyajikan distribusi bintang ulasan dan persentase kepuasan pengunjung.
+  * **Bandung AI Lens (Multimodal Vision):** Fitur pemindai kamera cerdas yang mengenali landmark Bandung (Gedung Sate, Kawah Putih, Braga, Tangkuban Parahu, Bosscha, dll.) secara visual, mengungkap sejarah, fakta unik, dan saran aktivitas.
   * **Rekomendasi Cerdas Sesuai Preferensi:** Memberikan saran destinasi terbaik berdasarkan budget, preferensi tema wisata, dan waktu luang pengguna.
 * **Rekomendasi Visual:**
-  * Tangkapan layar lembar ulasan destinasi + visualisasi grafik rating bintang.
+  * Tangkapan layar lembar ulasan destinasi + visualisasi grafik rating bintang berdampingan dengan layar viewfinder Bandung AI Lens.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Keaslian ulasan adalah hal krusial bagi wisatawan. Di BandungHub, setiap ulasan yang dikirim langsung tersimpan di Supabase Cloud dan diverifikasi dengan pencatatan hash kriptografis guna mencegah manipulasi ulasan. Selain itu, terdapat sistem rekomendasi berbasis preferensi pengguna yang menyesuaikan saran wisata berdasarkan budget dan ketertarikan pribadi."
+  > "Keaslian ulasan adalah hal krusial bagi wisatawan. Di BandungHub, setiap ulasan yang dikirim langsung tersimpan di Supabase Cloud dan diverifikasi dengan pencatatan hash kriptografis guna mencegah manipulasi data. Selain itu, kami menghadirkan Bandung AI Lens berbasis Computer Vision yang memungkinkan pengguna mengarahkan kamera ke landmark ikonik untuk langsung mengetahui sejarah, trivia, dan rekomendasi aktivitas secara seketika."
 
 ---
 
@@ -173,14 +178,14 @@
 * **Judul Slide:** Pengujian Sistem & Jaminan Kualitas Kode
 * **Poin Utama di Slide:**
   * 🧪 **Unit & Widget Testing Komprehensif:**
-    * **24 Pengujian Otomatis (Automated Tests)**: Lulus 100% (`All tests passed!`).
-    * Cakupan pengujian: Routing Service, Bank Auth Lock, Sensor Smoothing, Integritas Blockchain Review, Personalization Engine, dan Widget Navigasi.
+    * **28 Pengujian Otomatis (Automated Tests)**: Lulus 100% (`All tests passed!`).
+    * Cakupan pengujian: Routing Service, Bandung AI Lens (Vision Scanner), Bank Auth Lock, Sensor Smoothing, Integritas Blockchain Review, Personalization Engine, dan Widget Navigasi.
   * 🛡️ **Validasi Linting & Bebas Error:** Mengikuti aturan konvensi Dart/Flutter (*clean code practices*).
   * ⚡ **Performa Responsif:** Waktu muat awal (*startup time*) di bawah 1,5 detik dengan konsumsi memori hemat.
 * **Rekomendasi Visual:**
-  * Cuplikan layar terminal eksekusi `flutter test` yang menampilkan tulisan hijau: `00:04 +24: All tests passed!`.
+  * Cuplikan layar terminal eksekusi `flutter test` yang menampilkan tulisan hijau: `00:12 +28: All tests passed!`.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Untuk menjamin kualitas dan stabilitas perangkat lunak, seluruh fungsionalitas kritis diuji menggunakan suite Automated Test. Sebanyak 24 skenario pengujian unit dan widget test berhasil lulus 100%, mencakup logika routing, keamanan PIN biometrik, kalkulasi itinerary, hingga pengujian integritas database."
+  > "Untuk menjamin kualitas dan stabilitas perangkat lunak, seluruh fungsionalitas kritis diuji menggunakan suite Automated Test. Sebanyak 28 skenario pengujian unit dan widget test berhasil lulus 100%, mencakup logika routing, kecerdasan buatan Bandung AI Lens, keamanan PIN biometrik, kalkulasi itinerary, hingga pengujian integritas database."
 
 ---
 
@@ -188,22 +193,23 @@
 * **Judul Slide:** Alur Demonstrasi Pengguna (User Journey)
 * **Poin Utama di Slide:**
   * **Langkah 1 (Masuk & Eksplorasi):** Login pengguna -> Jelajahi 38 destinasi di Beranda atau Peta.
-  * **Langkah 2 (Rencana Perjalanan):** Buat agenda liburan baru -> Tambahkan destinasi per hari -> Cek estimasi anggaran total.
-  * **Langkah 3 (Navigasi):** Buka rute destinasi -> Pilih moda mobil/jalan kaki -> Cek arah dengan kompas.
-  * **Langkah 4 (Ulasan & Ekspor):** Tulis ulasan pengalaman ke Supabase Cloud -> Ekspor rencana perjalanan ke format PDF / Catatan Teks.
+  * **Langkah 2 (Pindai AI Lens):** Buka Bandung AI Lens -> Arahkan kamera atau pilih landmark ikonik -> AI menyajikan sejarah & rekomendasi aktivitas.
+  * **Langkah 3 (Rencana Perjalanan):** Buat agenda liburan baru -> Tambahkan destinasi per hari -> Cek estimasi anggaran total.
+  * **Langkah 4 (Navigasi):** Buka rute destinasi -> Pilih moda mobil/jalan kaki -> Cek arah dengan kompas.
+  * **Langkah 5 (Ulasan & Ekspor):** Tulis ulasan pengalaman ke Supabase Cloud -> Ekspor rencana perjalanan ke format PDF / Catatan Teks.
 * **Rekomendasi Visual:**
-  * Diagram 4 langkah alur pengguna berurutan dilengkapi miniatur screenshot aplikasi di setiap langkahnya.
+  * Diagram 5 langkah alur pengguna berurutan dilengkapi miniatur screenshot aplikasi di setiap langkahnya.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Berikut adalah skenario singkat pengalaman pengguna: Pengguna masuk ke akun, mencari destinasi wisata favorit di Bandung, menyusunnya ke dalam rencana perjalanan 2 hari lengkap dengan kalkulasi biaya, membuka navigasi peta dan kompas menuju lokasi, memberikan review langsung ke Supabase, dan mengekspor dokumen perjalanannya ke file PDF."
+  > "Berikut adalah skenario singkat pengalaman pengguna: Pengguna masuk ke akun, memanfaatkan Bandung AI Lens untuk memindai landmark sejarah seperti Gedung Sate, menyusun rencana perjalanan liburan lengkap dengan kalkulasi biaya, membuka navigasi peta dan kompas menuju lokasi, memberikan review langsung ke Supabase, dan mengekspor dokumen perjalanannya ke file PDF."
 
 ---
 
 ### Slide 12: Kesimpulan & Sesi Tanya Jawab (Q&A)
 * **Judul Slide:** Kesimpulan & Nilai Tambah Aplikasi
 * **Poin Utama di Slide:**
-  * 🌟 **Solusi Komprehensif:** Menggabungkan katalog wisata terkurasi, navigasi multi-moda, dan perencana anggaran dalam satu aplikasi terpadu.
-  * 🌟 **Teknologi Handal:** Kombinasi tangguh antara Flutter, Supabase Cloud, dan Offline SQLite Storage.
-  * 🌟 **Kesiapan Rilis:** Telah melalui pengujian menyeluruh (24/24 tests passed) dengan desain antarmuka modern yang adaptif.
+  * 🌟 **Solusi Komprehensif:** Menggabungkan katalog wisata terkurasi, AI multimodal visual scanner, navigasi multi-moda, dan perencana anggaran dalam satu aplikasi terpadu.
+  * 🌟 **Teknologi Handal:** Kombinasi tangguh antara Flutter, Gemini AI Vision, Supabase Cloud, dan Offline SQLite Storage.
+  * 🌟 **Kesiapan Rilis:** Telah melalui pengujian menyeluruh (28/28 tests passed) dengan desain antarmuka modern yang adaptif.
   * **Terima Kasih / Sesi Tanya Jawab (Q&A)**
   * Kontak: [Email Anda] | GitHub: [Link Repo GitHub Anda]
 * **Rekomendasi Visual:**

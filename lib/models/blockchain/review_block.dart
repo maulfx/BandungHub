@@ -13,6 +13,7 @@ class ReviewBlock {
   final String comment; // Isi ulasan
   final String previousHash; // Hash dari blok sebelum ini (pengikat rantai)
   final String hash; // Hash SHA-256 unik dari isi blok ini
+  final String? txHash; // Transaction Hash di Ethereum Sepolia Testnet (jika di-anchor on-chain)
 
   const ReviewBlock({
     required this.index,
@@ -24,6 +25,7 @@ class ReviewBlock {
     required this.comment,
     required this.previousHash,
     required this.hash,
+    this.txHash,
   });
 
   /// Menghitung SHA-256 Hash secara deterministik dari seluruh properti blok
@@ -53,6 +55,7 @@ class ReviewBlock {
     String? comment,
     String? previousHash,
     String? hash,
+    String? txHash,
   }) {
     return ReviewBlock(
       index: index ?? this.index,
@@ -64,6 +67,7 @@ class ReviewBlock {
       comment: comment ?? this.comment,
       previousHash: previousHash ?? this.previousHash,
       hash: hash ?? this.hash,
+      txHash: txHash ?? this.txHash,
     );
   }
 
@@ -78,6 +82,7 @@ class ReviewBlock {
       'comment': comment,
       'previousHash': previousHash,
       'hash': hash,
+      'txHash': txHash,
     };
   }
 
@@ -94,6 +99,7 @@ class ReviewBlock {
       comment: map['comment'] as String? ?? '',
       previousHash: map['previousHash'] as String? ?? '',
       hash: map['hash'] as String? ?? '',
+      txHash: map['txHash'] as String?,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../data/repositories/review_repository.dart';
 import '../../models/destination.dart';
 
 class DestinationCard extends StatelessWidget {
@@ -30,11 +31,15 @@ class DestinationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final catColor = AppColors.getCategoryColor(destination.category);
     final catIcon = AppColors.getCategoryIcon(destination.category);
+    final effectiveRating = ReviewRepository().getAverageRating(
+      destination.id,
+      fallback: destination.rating,
+    );
 
     if (isHorizontal) {
       return Semantics(
         label:
-            'Destinasi ${destination.name}, ${destination.category}, rating ${destination.rating.toStringAsFixed(1)}, tiket ${_formatCurrency(destination.estimatedPrice)}',
+            'Destinasi ${destination.name}, ${destination.category}, rating ${effectiveRating.toStringAsFixed(1)}, tiket ${_formatCurrency(destination.estimatedPrice)}',
         button: true,
         child: Card(
           margin: const EdgeInsets.only(bottom: 14),
@@ -151,7 +156,7 @@ class DestinationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            destination.rating.toStringAsFixed(1),
+                            effectiveRating.toStringAsFixed(1),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -243,7 +248,7 @@ class DestinationCard extends StatelessWidget {
     // Default Vertical Card layout
     return Semantics(
       label:
-          'Destinasi ${destination.name}, ${destination.category}, rating ${destination.rating.toStringAsFixed(1)}, tiket ${_formatCurrency(destination.estimatedPrice)}',
+          'Destinasi ${destination.name}, ${destination.category}, rating ${effectiveRating.toStringAsFixed(1)}, tiket ${_formatCurrency(destination.estimatedPrice)}',
       button: true,
       child: SizedBox(
         width: 220,
@@ -322,7 +327,7 @@ class DestinationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            destination.rating.toStringAsFixed(1),
+                            effectiveRating.toStringAsFixed(1),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,

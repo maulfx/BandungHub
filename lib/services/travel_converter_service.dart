@@ -53,6 +53,11 @@ class TimezoneInfo {
 
   int get diffHoursFromBandung => offsetFromUtcHours - 7;
 
+  String get name => '$cityName, $country';
+  String get utcOffset =>
+      'UTC${offsetFromUtcHours >= 0 ? '+' : ''}$offsetFromUtcHours';
+  String get diffStringFromBandung => diffDescription;
+
   String get diffDescription {
     final diff = diffHoursFromBandung;
     if (diff == 0) return 'Waktu sama dengan Bandung (WIB)';

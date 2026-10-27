@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/blockchain/review_block.dart';
 import '../models/destination_review.dart';
+import 'sepolia_anchor_service.dart';
 
 /// Service inti pengelola Buku Besar Blockchain untuk Ulasan Destinasi (Review Blockchain Ledger).
 /// Mengontrol pembuatan blok, persistensi data, validasi rantai (audit), dan simulasi demo.
@@ -111,7 +112,35 @@ class ReviewBlockchainService extends ChangeNotifier {
       '⛓️ [Blockchain] Blok #${newBlock.index} dicetak untuk ulasan "${review.id}". Hash: ${newBlock.hash.substring(0, 16)}...',
     );
 
+    // Otomatis coba anchor ke Ethereum Sepolia di background
+    anchorBlock(newBlock);
+
     return newBlock;
+  }
+
+  /// Menambatkan (anchor) hash blok ke Ethereum Sepolia Testnet
+  Future<String?> anchorBlock(ReviewBlock block) async {
+    try {
+      final txHash = await SepoliaAnchorService().anchorBlockHash(
+        blockIndex: block.index,
+        blockHash: block.hash,
+        reviewId: block.reviewId,
+      );
+
+      if (txHash != null) {
+        final targetIndex = _chain.indexWhere((b) => b.hash == block.hash);
+        if (targetIndex != -1) {
+          _chain[targetIndex] = _chain[targetIndex].copyWith(txHash: txHash);
+          notifyListeners();
+          await _saveToStorage();
+          debugPrint('⛓️ [Blockchain] Blok #${block.index} berhasil disimpan dengan TxHash Sepolia: $txHash');
+        }
+      }
+      return txHash;
+    } catch (e) {
+      debugPrint('⚠️ [Blockchain] Gagal anchoring blok #${block.index}: $e');
+      return null;
+    }
   }
 
   /// Sinkronisasi awal: Cetak blok untuk ulasan default jika belum tercatat di blockchain

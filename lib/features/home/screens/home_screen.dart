@@ -10,16 +10,11 @@ import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../data/repositories/notification_repository.dart';
-import '../../converter/screens/travel_converter_screen.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
+import '../../lens/screens/bandung_lens_screen.dart';
 import '../../notifications/screens/notification_center_screen.dart';
 import '../../offline/widgets/offline_banner_widget.dart';
 import '../../recommendations/screens/ai_chat_screen.dart';
-import '../../recommendations/screens/preference_form_screen.dart';
-import '../../../data/repositories/preference_repository.dart';
-import '../../../models/recommendation_result.dart';
-import '../../../models/travel_preference.dart';
-import '../../../services/recommendation_engine.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigateTab;
@@ -40,49 +35,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   bool _hasError = false;
 
-  // AI Personalized Recommendations State
-  List<RecommendationResult> _personalizedRecommendations = [];
-  TravelPreference _userPreference = const TravelPreference();
-
   @override
   void initState() {
     super.initState();
     _destinationRepo.addListener(_onDestinationsChanged);
-    _loadPersonalizedRecommendations();
   }
 
   void _onDestinationsChanged() {
     if (mounted) {
-      _loadPersonalizedRecommendations();
       setState(() {});
     }
-  }
-
-  Future<void> _loadPersonalizedRecommendations() async {
-    final pref = await PreferenceRepository().getPreference();
-    final source = _destinationRepo.allDestinations.isNotEmpty
-        ? _destinationRepo.allDestinations
-        : BandungDestinations.list;
-    final results = RecommendationEngine.getRecommendations(
-      destinations: source,
-      preference: pref,
-    );
-    if (mounted) {
-      setState(() {
-        _userPreference = pref;
-        _personalizedRecommendations = results;
-      });
-    }
-  }
-
-  Future<void> _openPreferenceForm() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PreferenceFormScreen(),
-      ),
-    );
-    _loadPersonalizedRecommendations();
   }
 
   @override
@@ -252,22 +214,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                               ),
                               const SizedBox(width: 4),
-                              // Travel Currency & Timezone Converter
+                              // Bandung AI Lens (Camera Landmark Scanner)
                               IconButton(
-                                tooltip: 'Konverter Kurs & Waktu Wisatawan',
+                                key: const Key('btn_home_ai_lens'),
+                                tooltip: 'Bandung AI Lens (Pindai Landmark)',
                                 icon: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: AppColors.getCardColor(context),
+                                    color: AppColors.secondary.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.getBorderColor(context),
+                                      color: AppColors.secondary.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: const Icon(
-                                    Icons.currency_exchange_rounded,
+                                    Icons.camera_enhance_rounded,
                                     size: 20,
-                                    color: AppColors.primary,
+                                    color: AppColors.secondary,
                                   ),
                                 ),
                                 onPressed: () {
@@ -275,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const TravelConverterScreen(),
+                                          const BandungLensScreen(),
                                     ),
                                   );
                                 },
@@ -361,8 +324,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               Icons.search_rounded,
                               color: AppColors.primary,
                             ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_searchQuery.isNotEmpty)
+                                  IconButton(
                                     icon: const Icon(
                                       Icons.clear_rounded,
                                       size: 20,
@@ -373,8 +339,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                         _searchQuery = '';
                                       });
                                     },
-                                  )
-                                : null,
+                                  ),
+                                IconButton(
+                                  tooltip: 'Pindai Landmark dengan Kamera (AI Lens)',
+                                  icon: const Icon(
+                                    Icons.camera_alt_outlined,
+                                    color: AppColors.primary,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const BandungLensScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
@@ -560,34 +543,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ),
                                       ),
-                                      OutlinedButton.icon(
-                                        onPressed: _openPreferenceForm,
-                                        icon: const Icon(
-                                          Icons.tune_rounded,
-                                          size: 14,
-                                          color: Colors.white,
-                                        ),
-                                        label: const Text(
-                                          'Filter Preferensi',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(
-                                            color: Colors.white70,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
-                                          ),
-                                          minimumSize: Size.zero,
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                      ),
                                       ElevatedButton.icon(
                                         onPressed: () {
                                           Navigator.push(
@@ -624,30 +579,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                       ElevatedButton.icon(
+                                        key: const Key('btn_banner_ai_lens'),
                                         onPressed: () {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  const TravelConverterScreen(),
+                                                  const BandungLensScreen(),
                                             ),
                                           );
                                         },
                                         icon: const Icon(
-                                          Icons.currency_exchange_rounded,
+                                          Icons.camera_enhance_rounded,
                                           size: 14,
-                                          color: AppColors.primary,
+                                          color: Colors.white,
                                         ),
                                         label: const Text(
-                                          'Kurs & Waktu',
+                                          'Bandung AI Lens',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
+                                            color: Colors.white,
                                           ),
                                         ),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white,
+                                          backgroundColor: AppColors.secondary,
+                                          foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 12,
                                             vertical: 8,
@@ -673,82 +630,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
-                // AI Personalized Recommendations Horizontal Section
-                if (_searchQuery.isEmpty &&
-                    _selectedCategory == 'Semua' &&
-                    _personalizedRecommendations.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 15,
-                              color: Color(0xFF059669),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rekomendasi Untuk Kamu',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.getTextPrimary(context),
-                                  ),
-                                ),
-                                Text(
-                                  'Sesuai selera ${_userPreference.preferredCategories.join(", ")} • Budget ≤ Rp ${_userPreference.maxBudgetPerPerson.toInt()}',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: AppColors.getTextSecondary(context),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _openPreferenceForm,
-                            icon: const Icon(Icons.tune_rounded, size: 14),
-                            label: const Text('Atur', style: TextStyle(fontSize: 12)),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 228,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(left: 20),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _personalizedRecommendations.take(6).length,
-                        itemBuilder: (context, index) {
-                          final item = _personalizedRecommendations[index];
-                          return _buildPersonalizedCard(item);
-                        },
-                      ),
-                    ),
-                  ),
-                ],
 
                 // Popular Horizontal Section
                 if (_searchQuery.isEmpty && _selectedCategory == 'Semua') ...[
@@ -866,191 +747,6 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => const AiChatScreen()),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildPersonalizedCard(RecommendationResult item) {
-    final dest = item.destination;
-    final matchPercentage = item.scorePercentage;
-    final color = matchPercentage >= 85
-        ? const Color(0xFF059669) // Emerald Green
-        : matchPercentage >= 70
-            ? AppColors.primary
-            : const Color(0xFFD97706); // Amber
-
-    return Container(
-      width: 235,
-      margin: const EdgeInsets.only(right: 14, bottom: 6),
-      decoration: BoxDecoration(
-        color: AppColors.getCardColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withValues(alpha: 0.25),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _showDestinationDetails(dest),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image with match badge overlay
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(15)),
-                  child: Image.network(
-                    dest.imageUrl,
-                    height: 115,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      height: 115,
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      child: const Icon(
-                        Icons.landscape_rounded,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                // AI Match percentage badge
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 1.5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome_rounded,
-                          color: Colors.white,
-                          size: 11,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          '$matchPercentage% Cocok',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Category Tag
-                Positioned(
-                  bottom: 8,
-                  left: 8,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      dest.category,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Info Content
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    dest.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  if (item.reasons.isNotEmpty)
-                    Text(
-                      item.reasons.first,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 14,
-                            color: Colors.amber,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            dest.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        dest.estimatedPrice <= 0
-                            ? 'Gratis'
-                            : 'Rp ${dest.estimatedPrice.toInt()}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

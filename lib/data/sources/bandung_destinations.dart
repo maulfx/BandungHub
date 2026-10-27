@@ -19,7 +19,7 @@ class BandungDestinations {
       estimatedPrice: 5000.0,
       operationalHours: 'Selasa - Minggu 09.30 - 16.00 WIB (Senin & Libur Nasional tutup)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Gedung_Sate_Oktober_2024_-_Rahmatdenas.jpg/960px-Gedung_Sate_Oktober_2024_-_Rahmatdenas.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.8, reviewCount: 78500, isVerified: true,
+      rating: 4.8, reviewCount: 1, isVerified: true,
       tags: ['Heritage', 'Museum Gedung Sate', 'Arsitektur Neo-Klasik', 'Ikon Jawa Barat'],
     ),
     Destination(
@@ -32,7 +32,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Buka 24 Jam (Area Publik & Trotoar Pejalan Kaki)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Jl_Braga_Street_Sign_in_Bandung.jpg/960px-Jl_Braga_Street_Sign_in_Bandung.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 68400, isVerified: true,
+      rating: 4.7, reviewCount: 1, isVerified: true,
       tags: ['Parijs Van Java', 'Art Deco', 'Kafe Estetik', 'Wisata Malam'],
     ),
     Destination(
@@ -45,7 +45,7 @@ class BandungDestinations {
       estimatedPrice: 3000.0,
       operationalHours: 'Senin - Kamis 09.00 - 15.00 | Sabtu - Minggu 09.00 - 14.00 WIB (Jumat tutup)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Bandung%2C_Museum_Geologi.jpg/960px-Bandung%2C_Museum_Geologi.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 42300, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Fosil T-Rex', 'Edukasi Kebumian', 'Museum Sains', 'Wisata Edukasi'],
     ),
     Destination(
@@ -58,7 +58,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Selasa, Kamis, Sabtu, Minggu 09.00 - 15.30 WIB (Sen, Rab, Jum tutup)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Musium_KAA.jpg/960px-Musium_KAA.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.8, reviewCount: 24500, isVerified: true,
+      rating: 4.8, reviewCount: 0, isVerified: true,
       tags: ['KAA 1955', 'Gedung Merdeka', 'Sejarah Diplomasi', 'Gratis'],
     ),
     Destination(
@@ -71,7 +71,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 06.00 - 21.00 WIB (Tiket Naik Menara Rp 7.000)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Masjid_Raya_Bandung_dan_Alun-alun_Bandung_%28potrait%29.jpg/960px-Masjid_Raya_Bandung_dan_Alun-alun_Bandung_%28potrait%29.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 85200, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Rumput Sintetis', 'Menara Kembar 81m', 'Masjid Raya', 'Jantung Kota'],
     ),
     Destination(
@@ -84,7 +84,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 04.00 - 22.00 WIB (Kawasan Masjid Terbuka)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/id/thumb/8/8c/Al_Jabbar_Mosque.jpg/960px-Al_Jabbar_Mosque.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.9, reviewCount: 96800, isVerified: true,
+      rating: 4.9, reviewCount: 0, isVerified: true,
       tags: ['Masjid Terapung', 'Galeri Rasulullah', 'Gedebage', 'Arsitektur Ikonik'],
     ),
     Destination(
@@ -97,7 +97,7 @@ class BandungDestinations {
       estimatedPrice: 50000.0,
       operationalHours: 'Rabu - Minggu 09.00 - 17.00 WIB (Senin & Selasa tutup)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Nugallery.jpg/960px-Nugallery.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 10400, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Nyoman Nuarta', 'Seni Patung Monumental', 'Galeri Seni', 'Taman Budaya'],
     ),
     Destination(
@@ -110,7 +110,7 @@ class BandungDestinations {
       estimatedPrice: 30000.0,
       operationalHours: 'Senin - Jumat 09.00 - 14.30 WIB (Wajib reservasi daring resmi)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Bosscha_001.JPG/960px-Bosscha_001.JPG?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.8, reviewCount: 16900, isVerified: true,
+      rating: 4.8, reviewCount: 0, isVerified: true,
       tags: ['Observatorium Tertua 1923', 'Teleskop Zeiss', 'Astronomi', 'Cagar Budaya'],
     ),
 
@@ -127,7 +127,7 @@ class BandungDestinations {
       estimatedPrice: 30000.0,
       operationalHours: 'Setiap Hari 07.00 - 17.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Kawah_Putih_Lake_from_the_viewing_platform%2C_Bandung_Regency%2C_2014-08-21.jpg/960px-Kawah_Putih_Lake_from_the_viewing_platform%2C_Bandung_Regency%2C_2014-08-21.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 94500, isVerified: true,
+      rating: 4.6, reviewCount: 1, isVerified: true,
       tags: ['Danau Kawah Belerang', 'Gunung Patuha 2194m', 'Spot Foto Ikonik', 'Ciwidey'],
     ),
     Destination(
@@ -140,7 +140,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 07.00 - 17.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Panoramic_View_of_Kawah_Ratu_Crater_in_Mt.Tangkuban_Perahu.jpg/960px-Panoramic_View_of_Kawah_Ratu_Crater_in_Mt.Tangkuban_Perahu.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 81200, isVerified: true,
+      rating: 4.6, reviewCount: 2, isVerified: true,
       tags: ['Kawah Ratu', 'Kawah Domas', 'Legenda Sangkuriang', 'Lembang'],
     ),
     Destination(
@@ -153,7 +153,7 @@ class BandungDestinations {
       estimatedPrice: 30000.0,
       operationalHours: 'Setiap Hari 09.00 - 20.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80',
-      rating: 4.7, reviewCount: 56700, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Ekowisata Bambu', 'Resto Sarang Burung', 'Danau Buatan', 'Glamping Burangrang'],
     ),
     Destination(
@@ -166,7 +166,7 @@ class BandungDestinations {
       estimatedPrice: 17000.0,
       operationalHours: 'Setiap Hari 05.00 - 18.00 WIB',
       imageUrl: 'https://upload.wikimedia.org/wikipedia/id/9/9d/20140730_tebing_keraton.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled',
-      rating: 4.6, reviewCount: 45200, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Sunrise Hutan Pinus', 'Patahan Lembang', 'Tahura Djuanda', 'Panorama Bukit'],
     ),
     Destination(
@@ -179,7 +179,7 @@ class BandungDestinations {
       estimatedPrice: 40000.0,
       operationalHours: 'Senin - Jumat 09.00 - 18.00 | Sabtu - Minggu 08.00 - 19.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
-      rating: 4.7, reviewCount: 55400, isVerified: true,
+      rating: 4.7, reviewCount: 1, isVerified: true,
       tags: ['Hutan Anggrek Terbesar', 'Wood Bridge LED', 'Golden Pine', 'Hutan Pinus Cikole'],
     ),
     Destination(
@@ -192,7 +192,7 @@ class BandungDestinations {
       estimatedPrice: 25000.0,
       operationalHours: 'Buka 24 Jam (Wahana Rusa & Outbound: 07.30 - 17.00 WIB)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cd/Penangkaran_Rusa_Ranca_Upas%2C_Kampung_Cai%2C_Kabupaten_Bandung%2C_Jawa_Barat%2C_Indonesia_%286%29.jpg/960px-Penangkaran_Rusa_Ranca_Upas%2C_Kampung_Cai%2C_Kabupaten_Bandung%2C_Jawa_Barat%2C_Indonesia_%286%29.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 38900, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Penangkaran Rusa Timor', 'Bumi Perkemahan', 'Pemandian Air Panas', 'Ciwidey'],
     ),
     Destination(
@@ -205,7 +205,7 @@ class BandungDestinations {
       estimatedPrice: 25000.0,
       operationalHours: 'Setiap Hari 08.00 - 17.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Junghuhn_See_Telaga_Patengan_auf_Java.jpg/960px-Junghuhn_See_Telaga_Patengan_auf_Java.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 53100, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Danau Vulkanik Purba', 'Kebun Teh Rancabali', 'Batu Cinta', 'Kapal Pinisi Resto'],
     ),
     Destination(
@@ -218,7 +218,7 @@ class BandungDestinations {
       estimatedPrice: 17000.0,
       operationalHours: 'Setiap Hari 07.00 - 17.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=80',
-      rating: 4.7, reviewCount: 42100, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Trekking Hutan Lindung', 'Goa Belanda 1918', 'Goa Jepang', 'Curug Omas'],
     ),
     Destination(
@@ -231,7 +231,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 08.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-      rating: 4.5, reviewCount: 36800, isVerified: true,
+      rating: 4.5, reviewCount: 0, isVerified: true,
       tags: ['Air Panas Belerang Alami', 'Curug Cigulung', 'Jalur Trekking Tahura', 'Lembang'],
     ),
     Destination(
@@ -244,7 +244,7 @@ class BandungDestinations {
       estimatedPrice: 70000.0,
       operationalHours: 'Setiap Hari 07.00 - 17.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Panorama_Ciwidey_taken_by_%40rahman.amiin.jpg/960px-Panorama_Ciwidey_taken_by_%40rahman.amiin.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 26400, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Jembatan Gantung 370m', 'Kawah Belerang Alami', 'Lumpur Hangat', 'Rancabali'],
     ),
     Destination(
@@ -257,7 +257,7 @@ class BandungDestinations {
       estimatedPrice: 15000.0,
       operationalHours: 'Setiap Hari 06.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 21500, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Batu Karst Purba', 'Goa Pawon Prasejarah', 'Situs Geopark', 'Golden Sunset'],
     ),
     Destination(
@@ -270,7 +270,7 @@ class BandungDestinations {
       estimatedPrice: 15000.0,
       operationalHours: 'Setiap Hari 06.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
-      rating: 4.8, reviewCount: 31200, isVerified: true,
+      rating: 4.8, reviewCount: 0, isVerified: true,
       tags: ['Jembatan Kayu Kebun Teh', 'Sunset Pangalengan 1800mdpl', 'Gunung Wayang', 'ATV Track'],
     ),
     Destination(
@@ -283,7 +283,7 @@ class BandungDestinations {
       estimatedPrice: 15000.0,
       operationalHours: 'Setiap Hari 07.00 - 17.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Cileunca_Lake.jpg/960px-Cileunca_Lake.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.6, reviewCount: 28400, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Arung Jeram Palayangan', 'Danau Pangalengan', 'Flying Fox', 'Camping Tepi Danau'],
     ),
     Destination(
@@ -296,7 +296,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 06.00 - 18.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/FWBabakanSiliwangi.jpg/960px-FWBabakanSiliwangi.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 32800, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Hutan Kota Baksil', 'Forest Walk Kanopi 2km', 'Jogging Sejuk', 'Gratis Dekat ITB'],
     ),
 
@@ -313,7 +313,7 @@ class BandungDestinations {
       estimatedPrice: 85000.0,
       operationalHours: 'Setiap Hari 08.00 - 17.00 WIB (Pertunjukan utama pukul 15.30 WIB)',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Saung_Angklung_Udjo.JPG/960px-Saung_Angklung_Udjo.JPG?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.9, reviewCount: 47600, isVerified: true,
+      rating: 4.9, reviewCount: 1, isVerified: true,
       tags: ['Warisan Budaya UNESCO', 'Konser Angklung Interaktif', 'Wayang Golek', 'Tari Jaipong'],
     ),
     Destination(
@@ -326,7 +326,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Senin - Jumat 09.00 - 18.00 | Sabtu - Minggu 08.00 - 19.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 84300, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Pasar Perahu Terapung', 'Kota Mini Lembang', 'Kyotoku Kostum Jepang', 'Kuliner Nusantara'],
     ),
     Destination(
@@ -339,7 +339,7 @@ class BandungDestinations {
       estimatedPrice: 50000.0,
       operationalHours: 'Setiap Hari 09.00 - 18.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Gunung_Batu.jpg/960px-Gunung_Batu.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.5, reviewCount: 59700, isVerified: true,
+      rating: 4.5, reviewCount: 0, isVerified: true,
       tags: ['Arsitektur 7 Negara', 'Sewa Kostum Mancanegara', 'Paviliun Tematik', 'Lembang'],
     ),
     Destination(
@@ -352,7 +352,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 09.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 66200, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Rumah Hobbit', 'Susu Murni Segar', 'Kostum Belanda Tradisional', 'Taman Petting Zoo'],
     ),
     Destination(
@@ -365,7 +365,7 @@ class BandungDestinations {
       estimatedPrice: 70000.0,
       operationalHours: 'Senin - Jumat 09.00 - 17.00 | Sabtu - Minggu 08.00 - 18.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0f/Bandung_Zoo_main_gate.JPG/960px-Bandung_Zoo_main_gate.JPG?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 44500, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Bird Aviary Raksasa', 'Neko Cat Cafe', 'Resto Singa Berdinding Kaca', 'Edukasi Satwa'],
     ),
     Destination(
@@ -378,7 +378,7 @@ class BandungDestinations {
       estimatedPrice: 10000.0,
       operationalHours: 'Setiap Hari 09.00 - 22.00 WIB (Dancing Fountain atraksi: 19.00 & 20.00 WIB)',
       imageUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 39100, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Air Mancur Menari Spektakuler', 'Kampung Korea K-Pop', 'Trem Listrik Keliling', 'Kuliner Malam'],
     ),
 
@@ -395,7 +395,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 08.00 - 24.00 WIB (Sangat ramai saat malam hari)',
       imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-      rating: 4.5, reviewCount: 38700, isVerified: true,
+      rating: 4.5, reviewCount: 0, isVerified: true,
       tags: ['City Lights Bandung Utara', 'Nasi Timbel Komplit', 'Sambal Dadak Khas Sunda', 'Ketan Bakar'],
     ),
     Destination(
@@ -408,7 +408,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 16.00 - 23.30 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
-      rating: 4.5, reviewCount: 35600, isVerified: true,
+      rating: 4.5, reviewCount: 0, isVerified: true,
       tags: ['Pusat Street Food Pecinan', 'Seafood Bakar', 'Sate Maranggi', 'Jajanan Malam'],
     ),
     Destination(
@@ -421,7 +421,7 @@ class BandungDestinations {
       estimatedPrice: 45000.0,
       operationalHours: 'Setiap Hari 10.00 - 23.30 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 64800, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['1100 Menu Kuliner Nusantara', 'Food Court Terbuka', '23 Paskal Mall', 'Kuliner Malam'],
     ),
     Destination(
@@ -434,7 +434,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Senin - Sabtu 09.00 - 14.30 WIB (Minggu & Libur Nasional tutup)',
       imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
-      rating: 4.8, reviewCount: 26100, isVerified: true,
+      rating: 4.8, reviewCount: 0, isVerified: true,
       tags: ['Pabrik Kopi Heritage 1930', 'Mokka Arabika Matang', 'Sangrai Kayu Bakar', 'Oleh-oleh Legendaris'],
     ),
     Destination(
@@ -447,7 +447,7 @@ class BandungDestinations {
       estimatedPrice: 35000.0,
       operationalHours: 'Setiap Hari 08.00 - 20.00 WIB',
       imageUrl: 'https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Batagor.jpg/960px-Batagor.jpg?utm_source=id.wikipedia.org&utm_campaign=api&utm_content=thumbnail',
-      rating: 4.7, reviewCount: 33200, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Batagor Tenggiri Renyah', 'Bumbu Kacang Gurih Manis', 'Ikon Kuliner Bandung', 'Legendaris'],
     ),
     Destination(
@@ -460,7 +460,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 08.30 - 17.30 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80',
-      rating: 4.4, reviewCount: 46800, isVerified: true,
+      rating: 4.4, reviewCount: 0, isVerified: true,
       tags: ['Pusat Grosir Tekstil', 'Kain Batik Priangan', 'Pusat Oleh-oleh Jabar', 'Sejak Era Hindia Belanda'],
     ),
 
@@ -477,7 +477,7 @@ class BandungDestinations {
       estimatedPrice: 200000.0,
       operationalHours: 'Setiap Hari 10.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?auto=format&fit=crop&w=800&q=80',
-      rating: 4.7, reviewCount: 75400, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Indoor Theme Park Terbesar', 'Yamaha Racing Coaster', 'Giant Swing', 'Pertunjukan Teater'],
     ),
     Destination(
@@ -490,7 +490,7 @@ class BandungDestinations {
       estimatedPrice: 40000.0,
       operationalHours: 'Senin - Jumat 09.00 - 17.00 | Sabtu - Minggu 08.00 - 18.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80',
-      rating: 4.5, reviewCount: 28900, isVerified: true,
+      rating: 4.5, reviewCount: 0, isVerified: true,
       tags: ['Karpet Terbang Aladdin', 'Sky Bike Melayang', 'Jembatan Kaca Bening', 'Wahana Hutan Pinus'],
     ),
     Destination(
@@ -503,7 +503,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 10.00 - 22.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=800&q=80',
-      rating: 4.7, reviewCount: 88500, isVerified: true,
+      rating: 4.7, reviewCount: 0, isVerified: true,
       tags: ['Mall Resort Semi-Outdoor', 'Sky Level Rooftop Garden', 'Arena Ice Skating Gardenice', 'Belanja & Resto Premium'],
     ),
     Destination(
@@ -516,7 +516,7 @@ class BandungDestinations {
       estimatedPrice: 0.0,
       operationalHours: 'Setiap Hari 10.00 - 22.00 WIB',
       imageUrl: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=800&q=80',
-      rating: 4.6, reviewCount: 61200, isVerified: true,
+      rating: 4.6, reviewCount: 0, isVerified: true,
       tags: ['Mall Terbuka Berudara Segar', 'Skywalk Teras Cihampelas', 'Pusat Jeans & Distro', 'Kuliner & Hiburan'],
     ),
   ];

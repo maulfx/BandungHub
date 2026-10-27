@@ -9,6 +9,7 @@ import '../../../data/repositories/notification_repository.dart';
 import '../../../models/app_notification.dart';
 import '../../../models/itinerary.dart';
 import '../widgets/itinerary_export_sheet.dart';
+import '../../../services/travel_converter_service.dart';
 
 class ItineraryDetailScreen extends StatefulWidget {
   final String itineraryId;
@@ -23,11 +24,24 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
   final _repository = ItineraryRepository();
   int _selectedDay = 1;
 
+  // Currency & Timezone state for international/domestic tourists
+  String _selectedCurrencyCode = 'IDR';
+  TimezoneInfo _selectedTimezone =
+      TravelConverterService.supportedTimezones.first; // Default Bandung (WIB)
+
   final currencyFormatter = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
     decimalDigits: 0,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    TravelConverterService.loadCachedRates().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   void _openAddDestinationSheet(Itinerary itinerary) {
     showModalBottomSheet(
@@ -124,7 +138,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            '${dest.category} • ${dest.estimatedPrice <= 0 ? "Gratis" : currencyFormatter.format(dest.estimatedPrice)}',
+                            '${dest.category} • ${_formatItemPrice(dest.estimatedPrice)}',
                             style: const TextStyle(fontSize: 12),
                           ),
                           trailing: IconButton(
@@ -626,26 +640,31 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${itinerary.durationDays} Hari • ${itinerary.numberOfPeople} Orang',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${itinerary.durationDays} Hari • ${itinerary.numberOfPeople} Orang',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           // Integrity Hash Status Badge
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -747,30 +766,105 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
+                            Expanded(
+                              child: Row(
+                                children: const [
+                                  Icon(
+                                    Icons.account_balance_wallet_rounded,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Estimasi Anggaran',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.account_balance_wallet_rounded,
-                                  color: AppColors.primary,
-                                  size: 20,
+                                // Interactive Currency Dropdown Selector
+                                Container(
+                                  height: 28,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                    ),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedCurrencyCode,
+                                      isDense: true,
+                                      icon: const Icon(
+                                        Icons.arrow_drop_down_rounded,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                      items: TravelConverterService
+                                          .supportedCurrencies
+                                          .map(
+                                            (c) => DropdownMenuItem<String>(
+                                              value: c.code,
+                                              child: Text(
+                                                '${c.flag} ${c.code}',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(
+                                            () => _selectedCurrencyCode = val,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Estimasi Anggaran',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
+                                const SizedBox(width: 4),
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _openEditCostsDialog(itinerary),
+                                  style: TextButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  icon: const Icon(Icons.edit_rounded, size: 13),
+                                  label: const Text(
+                                    'Edit Biaya',
+                                    style: TextStyle(fontSize: 11),
                                   ),
                                 ),
                               ],
-                            ),
-                            TextButton.icon(
-                              onPressed: () => _openEditCostsDialog(itinerary),
-                              icon: const Icon(Icons.edit_rounded, size: 14),
-                              label: const Text(
-                                'Edit Biaya',
-                                style: TextStyle(fontSize: 12),
-                              ),
                             ),
                           ],
                         ),
@@ -778,43 +872,78 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                         const SizedBox(height: 6),
                         _buildBudgetRow(
                           'Tiket Masuk (${itinerary.items.length} Tempat × ${itinerary.numberOfPeople} Org)',
-                          currencyFormatter.format(itinerary.totalTicketCost),
+                          itinerary.totalTicketCost,
                         ),
                         _buildBudgetRow(
                           'Transportasi',
-                          currencyFormatter.format(
-                            itinerary.transportationCost,
-                          ),
+                          itinerary.transportationCost,
                         ),
                         _buildBudgetRow(
                           'Makanan / Konsumsi',
-                          currencyFormatter.format(itinerary.foodCost),
+                          itinerary.foodCost,
                         ),
                         _buildBudgetRow(
                           'Biaya Tambahan',
-                          currencyFormatter.format(itinerary.additionalCost),
+                          itinerary.additionalCost,
                         ),
                         const Divider(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text(
-                              'TOTAL ESTIMASI BIAYA',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimaryLight,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'TOTAL ESTIMASI BIAYA',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimaryLight,
+                                    ),
+                                  ),
+                                  if (itinerary.numberOfPeople > 1) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _selectedCurrencyCode == 'IDR'
+                                          ? 'Per orang: ${currencyFormatter.format(itinerary.costPerPerson)}'
+                                          : 'Per orang: ${currencyFormatter.format(itinerary.costPerPerson)} (≈ ${TravelConverterService.formatCurrency(TravelConverterService.convertCurrency(amount: itinerary.costPerPerson, fromCode: "IDR", toCode: _selectedCurrencyCode), _selectedCurrencyCode)})',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondaryLight,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            Text(
-                              currencyFormatter.format(
-                                itinerary.totalEstimatedBudget,
-                              ),
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  currencyFormatter.format(
+                                    itinerary.totalEstimatedBudget,
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                if (_selectedCurrencyCode != 'IDR') ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '≈ ${TravelConverterService.formatCurrency(TravelConverterService.convertCurrency(amount: itinerary.totalEstimatedBudget, fromCode: "IDR", toCode: _selectedCurrencyCode), _selectedCurrencyCode)}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),
@@ -852,29 +981,118 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Day Selector Pills
+                // Schedule Header with Timezone Selector
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Jadwal Destinasi',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Jadwal Destinasi',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Total: ${itinerary.items.length} Destinasi',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondaryLight,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Total: ${itinerary.items.length} Destinasi',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondaryLight,
+                      const SizedBox(width: 8),
+                      // Interactive Timezone Dropdown Selector
+                      Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<TimezoneInfo>(
+                            value: _selectedTimezone,
+                            isDense: true,
+                            icon: const Icon(
+                              Icons.arrow_drop_down_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                            items: TravelConverterService.supportedTimezones
+                                .map(
+                                  (tz) => DropdownMenuItem<TimezoneInfo>(
+                                    value: tz,
+                                    child: Text(
+                                      '${tz.flag} ${tz.code} (${tz.utcOffset})',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedTimezone = val);
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (_selectedTimezone.code != 'WIB') ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.secondary.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 16,
+                            color: AppColors.secondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Zona Wisatawan: ${_selectedTimezone.flag} ${_selectedTimezone.name} (${_selectedTimezone.diffStringFromBandung} dibanding WIB)',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimaryLight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 40,
@@ -1020,7 +1238,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        // Name & Price
+                                        // Name, Price & Scheduled Time
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -1037,12 +1255,42 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
-                                                '${item.destinationCategory} • ${item.ticketPrice <= 0 ? "Gratis" : currencyFormatter.format(item.ticketPrice)}',
+                                                '${item.destinationCategory} • ${_formatItemPrice(item.ticketPrice)}',
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   color: AppColors
                                                       .textSecondaryLight,
                                                 ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.access_time_rounded,
+                                                    size: 13,
+                                                    color: _selectedTimezone.code != 'WIB'
+                                                        ? AppColors.secondary
+                                                        : AppColors.textSecondaryLight,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Expanded(
+                                                    child: Text(
+                                                      _getItemEstimatedTime(
+                                                        item.visitOrder,
+                                                        _selectedTimezone,
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight: _selectedTimezone.code != 'WIB'
+                                                            ? FontWeight.w600
+                                                            : FontWeight.normal,
+                                                        color: _selectedTimezone.code != 'WIB'
+                                                            ? AppColors.secondary
+                                                            : AppColors.textSecondaryLight,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -1131,7 +1379,49 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
     );
   }
 
-  Widget _buildBudgetRow(String label, String amount) {
+  String _formatItemPrice(double price) {
+    if (price <= 0) return 'Gratis';
+    final idr = currencyFormatter.format(price);
+    if (_selectedCurrencyCode == 'IDR') return idr;
+    final converted = TravelConverterService.convertCurrency(
+      amount: price,
+      fromCode: 'IDR',
+      toCode: _selectedCurrencyCode,
+    );
+    return '$idr (≈ ${TravelConverterService.formatCurrency(converted, _selectedCurrencyCode)})';
+  }
+
+  String _getItemEstimatedTime(int order, TimezoneInfo tz) {
+    final baseHours = [9, 12, 15, 18, 20];
+    final slotHour =
+        (order - 1) < baseHours.length ? baseHours[order - 1] : 9 + (order * 2);
+    final bandungTime = '${slotHour.toString().padLeft(2, '0')}:00 WIB';
+    if (tz.code == 'WIB') {
+      return 'Kunjungan: $bandungTime';
+    }
+    final targetHour = (slotHour + tz.diffHoursFromBandung) % 24;
+    final targetTime = '${targetHour.toString().padLeft(2, '0')}:00 ${tz.code}';
+    return '$bandungTime (Waktu Anda: $targetTime)';
+  }
+
+  Widget _buildBudgetRow(String label, double amountInIdr) {
+    final idrText = currencyFormatter.format(amountInIdr);
+    final String rightText;
+    if (_selectedCurrencyCode == 'IDR') {
+      rightText = idrText;
+    } else {
+      final converted = TravelConverterService.convertCurrency(
+        amount: amountInIdr,
+        fromCode: 'IDR',
+        toCode: _selectedCurrencyCode,
+      );
+      final convText = TravelConverterService.formatCurrency(
+        converted,
+        _selectedCurrencyCode,
+      );
+      rightText = '$idrText (≈ $convText)';
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1147,9 +1437,12 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            amount,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          Flexible(
+            child: Text(
+              rightText,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

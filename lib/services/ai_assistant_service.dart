@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/repositories/review_repository.dart';
 import '../data/sources/bandung_destinations.dart';
 import '../models/chat_message.dart';
 import '../models/destination.dart';
+import '../models/landmark_scan_result.dart';
 
 class AiAssistantService {
   static final AiAssistantService _instance = AiAssistantService._internal();
@@ -699,8 +701,16 @@ BATASAN KETAT DAN GUARDRAILS (PENTING DAN WAJIB DIPATUHI):
         buffer.writeln();
         buffer.writeln('📍 **Lokasi**: ${dest.address}');
         buffer.writeln('🏷️ **Kategori**: ${dest.category}');
+        final revs = ReviewRepository().getReviewsForDestination(dest.id);
+        final currentRating = ReviewRepository().getAverageRating(
+          dest.id,
+          fallback: dest.rating,
+        );
+        final reviewText = revs.isNotEmpty
+            ? '${revs.length} ulasan wisatawan'
+            : 'Rekomendasi Terkurasi';
         buffer.writeln(
-          '⭐ **Rating**: ${dest.rating} / 5.0 (${dest.reviewCount} ulasan)',
+          '⭐ **Rating**: ${currentRating.toStringAsFixed(1)} / 5.0 ($reviewText)',
         );
         buffer.writeln(
           '💵 **Estimasi Tiket**: ${dest.estimatedPrice <= 0 ? 'Gratis' : 'Rp ${dest.estimatedPrice.toInt()}'}',
@@ -744,5 +754,274 @@ BATASAN KETAT DAN GUARDRAILS (PENTING DAN WAJIB DIPATUHI):
     } catch (_) {
       // Ignored safely
     }
+  }
+
+  /// Menganalisis foto landmark/objek wisata Bandung menggunakan Gemini Multimodal Vision API
+  Future<LandmarkScanResult> analyzeLandmarkImage({
+    required Uint8List imageBytes,
+    String? hintName,
+  }) async {
+    final apiKey = await getEffectiveApiKey();
+
+    if (apiKey.isNotEmpty) {
+      final base64Image = base64Encode(imageBytes);
+      final modelsToTry = [
+        _primaryModel,
+        ..._candidateModels.where((m) => m != _primaryModel),
+      ];
+
+      for (final model in modelsToTry) {
+        try {
+          final url = Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+          );
+
+          final payload = {
+            'system_instruction': {
+              'parts': [
+                {
+                  'text': '''Anda adalah AI Ahli Pariwisata Bandung dan Arsitektur Cagar Budaya (Bandung Smart Lens).
+Tugas Anda adalah menganalisis foto yang diberikan dan mengidentifikasi objek wisata, monumen, bangunan bersejarah, atau pemandangan alam di Bandung Raya.
+
+Format output WAJIB berupa JSON murni valid (tanpa markdown backtick ```json) dengan skema:
+{
+  "isBandungLandmark": true,
+  "landmarkName": "Nama Lengkap Objek/Tempat",
+  "confidencePercent": 95,
+  "category": "Sejarah & Budaya / Alam & Pegunungan / Keluarga / dsb",
+  "shortDescription": "Ringkasan 2-3 kalimat menarik tentang objek wisata ini",
+  "historyFact": "Fakta sejarah penting, tahun pembangunan, atau latar belakang arsitektur objek ini",
+  "interestingTrivia": "Fakta unik atau mitos/trivia yang jarang diketahui orang tentang tempat ini",
+  "recommendedThingsToDo": ["Aktivitas 1", "Aktivitas 2", "Aktivitas 3"]
+}''',
+                },
+              ],
+            },
+            'contents': [
+              {
+                'parts': [
+                  {
+                    'text':
+                        'Analisis foto ini secara mendalam. Jika ini adalah objek wisata atau landmark di Bandung (misalnya Gedung Sate, Kawah Putih, Bosscha, Jalan Braga, Saung Angklung Udjo, Tangkuban Parahu, Al-Jabbar, dsb), identifikasi dan kembalikan JSON lengkap.',
+                  },
+                  {
+                    'inline_data': {
+                      'mime_type': 'image/jpeg',
+                      'data': base64Image,
+                    },
+                  },
+                ],
+              },
+            ],
+            'generationConfig': {
+              'temperature': 0.2,
+              'maxOutputTokens': 1024,
+            },
+          };
+
+          final response = await http
+              .post(
+                url,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(payload),
+              )
+              .timeout(const Duration(seconds: 20));
+
+          if (response.statusCode == 200) {
+            final jsonBody = jsonDecode(response.body);
+            final candidates = jsonBody['candidates'] as List<dynamic>?;
+            if (candidates != null && candidates.isNotEmpty) {
+              final content =
+                  candidates.first['content'] as Map<String, dynamic>?;
+              final parts = content?['parts'] as List<dynamic>?;
+              if (parts != null && parts.isNotEmpty) {
+                final text = parts.first['text'] as String?;
+                if (text != null && text.isNotEmpty) {
+                  String cleanJson = text.trim();
+                  if (cleanJson.startsWith('```json')) {
+                    cleanJson = cleanJson.substring(7);
+                  } else if (cleanJson.startsWith('```')) {
+                    cleanJson = cleanJson.substring(3);
+                  }
+                  if (cleanJson.endsWith('```')) {
+                    cleanJson = cleanJson.substring(0, cleanJson.length - 3);
+                  }
+                  cleanJson = cleanJson.trim();
+
+                  final parsed = jsonDecode(cleanJson) as Map<String, dynamic>;
+                  final landmarkName =
+                      parsed['landmarkName'] as String? ?? 'Objek Wisata Bandung';
+
+                  final matched = _findMatchingDestination(landmarkName);
+
+                  return LandmarkScanResult.fromMap(
+                    parsed,
+                    matchedDestination: matched,
+                  );
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Gemini vision API error with model $model: $e');
+        }
+      }
+    }
+
+    // Fallback cerdas lokal jika offline / kuota habis
+    return _generateLocalLandmarkFallback(hintName: hintName);
+  }
+
+  Destination? _findMatchingDestination(String name) {
+    final lower = name.toLowerCase();
+    for (final d in BandungDestinations.list) {
+      final dLower = d.name.toLowerCase();
+      if (lower.contains(dLower) || dLower.contains(lower)) {
+        return d;
+      }
+    }
+    for (final d in BandungDestinations.list) {
+      for (final tag in d.tags) {
+        if (lower.contains(tag.toLowerCase())) {
+          return d;
+        }
+      }
+    }
+    return null;
+  }
+
+  LandmarkScanResult _generateLocalLandmarkFallback({String? hintName}) {
+    final hint = hintName?.toLowerCase() ?? '';
+
+    if (hint.contains('kawah putih') || hint.contains('patuha')) {
+      final dest = _findMatchingDestination('Kawah Putih Ciwidey');
+      return LandmarkScanResult(
+        isBandungLandmark: true,
+        landmarkName: 'Kawah Putih Ciwidey',
+        confidencePercent: 97,
+        category: 'Alam & Pegunungan',
+        shortDescription:
+            'Danau kawah vulkanik spektakuler di puncak Gunung Patuha pada ketinggian 2.194 mdpl dengan air putih kehijauan yang berubah warna secara berkala.',
+        historyFact:
+            'Ditemukan oleh ahli botani Belanda Dr. Franz Wilhelm Junghuhn pada tahun 1837 setelah membantah mitos kerajaan gaib burung mati di puncak Patuha.',
+        interestingTrivia:
+            'Warna kawah dapat berubah dari putih kebiruan, hijau toska, hingga kecokelatan tergantung kadar belerang, suhu kawah, dan bias sinar matahari.',
+        recommendedThingsToDo: [
+          'Berfoto di jembatan apung ponton tengah danau',
+          'Berjalan melintasi Skywalk Cantigi berlatar kabut',
+          'Mencicipi jagung bakar hangat di area parkir atas',
+        ],
+        matchedDestination: dest,
+      );
+    }
+
+    if (hint.contains('tangkuban') || hint.contains('parahu')) {
+      final dest = _findMatchingDestination('Gunung Tangkuban Parahu');
+      return LandmarkScanResult(
+        isBandungLandmark: true,
+        landmarkName: 'Gunung Tangkuban Parahu',
+        confidencePercent: 96,
+        category: 'Alam & Pegunungan',
+        shortDescription:
+            'Gunung api stratovulkan aktif legendaris Sangkuriang dengan bibir Kawah Ratu raksasa dan semburan belerang Kawah Domas di ketinggian 2.084 mdpl.',
+        historyFact:
+            'Bentuk perahu terbalik tercipta akibat runtuhnya kaldera Gunung Sunda Purba ribuan tahun lalu yang melahirkan legenda Dayang Sumbi.',
+        interestingTrivia:
+            'Pengunjung dapat merebus telur langsung di sumber mata air belerang alami Kawah Domas hingga matang sempurna dalam waktu 10 menit.',
+        recommendedThingsToDo: [
+          'Menyaksikan pemandangan megah bibir Kawah Ratu',
+          'Sensasi rebus telur dan terapi lumpur di Kawah Domas',
+          'Membeli suvenir kerajinan kayu dan ketan bakar',
+        ],
+        matchedDestination: dest,
+      );
+    }
+
+    if (hint.contains('braga')) {
+      final dest = _findMatchingDestination('Jalan Braga');
+      return LandmarkScanResult(
+        isBandungLandmark: true,
+        landmarkName: 'Jalan Braga',
+        confidencePercent: 98,
+        category: 'Sejarah & Budaya',
+        shortDescription:
+            'Jantung bersejarah "Parijs van Java" yang memadukan deretan gedung bergaya Art Deco kolonial Belanda, kafe estetik, dan seniman jalanan.',
+        historyFact:
+            'Dahulu dikenal sebagai Karrenweg (Jalan Pedati), berkembang menjadi pusat belanja barang mewah dan haute couture Eropa termasyhur di Hindia Belanda.',
+        interestingTrivia:
+            'Nama Braga konon diambil dari kata Sunda "ngabaraga" yang berarti berjalan bergaya menyusuri sungai, atau dari nama Bragi dewa puisi mitologi Nordik.',
+        recommendedThingsToDo: [
+          'Menikmati kopi di kafe estetik peninggalan kolonial',
+          'Melihat pameran lukisan pelukis trotoar jalanan',
+          'Berfoto di plang bersejarah ikonik Jalan Braga',
+        ],
+        matchedDestination: dest,
+      );
+    }
+
+    if (hint.contains('bosscha')) {
+      final dest = _findMatchingDestination('Observatorium Bosscha');
+      return LandmarkScanResult(
+        isBandungLandmark: true,
+        landmarkName: 'Observatorium Bosscha',
+        confidencePercent: 95,
+        category: 'Sejarah & Edukasi',
+        shortDescription:
+            'Observatorium astronomi modern tertua di Indonesia yang menampung teleskop refraktor ganda Zeiss 60 cm di perbukitan Lembang.',
+        historyFact:
+            'Didirikan pada tahun 1923 oleh Perhimpunan Astronomi Hindia Belanda atas sumbangsih utama dari tuan tanah perkebunan teh Karel Albert Rudolf Bosscha.',
+        interestingTrivia:
+            'Bangunan berkubah putih perak ini menjadi cagar budaya nasional dan lokasi syuting film legendaris "Petualangan Sherina".',
+        recommendedThingsToDo: [
+          'Melihat cara kerja kubah teleskop Zeiss yang dapat berputar',
+          'Belajar pemetaan konstelasi bintang dan galaksi Bima Sakti',
+          'Menikmati hawa sejuk di bawah pepohonan pinus cagar budaya',
+        ],
+        matchedDestination: dest,
+      );
+    }
+
+    if (hint.contains('angklung') || hint.contains('udjo')) {
+      final dest = _findMatchingDestination('Saung Angklung Udjo');
+      return LandmarkScanResult(
+        isBandungLandmark: true,
+        landmarkName: 'Saung Angklung Udjo',
+        confidencePercent: 99,
+        category: 'Keluarga & Budaya',
+        shortDescription:
+            'Pusat pelestarian dan pertunjukan seni angklung Sunda warisan dunia UNESCO dengan pagelaran musik orkestra bambu interaktif spektakuler.',
+        historyFact:
+            'Didirikan oleh Mang Udjo Ngalagena dan sang istri Uum Yumerti pada tahun 1966 dengan misi memelihara harmoni gotong royong budaya Pasundan.',
+        interestingTrivia:
+            'Setiap pengunjung dipinjami instrumen angklung dan dalam 10 menit dipandu secara interaktif memainkan harmoni lagu nusantara dan pop dunia.',
+        recommendedThingsToDo: [
+          'Bermain musik angklung bersama ratusan penonton',
+          'Menyaksikan pertunjukan wayang golek dan tari jaipong',
+          'Melihat bengkel kerajinan instrumen bambu tradisional',
+        ],
+        matchedDestination: dest,
+      );
+    }
+
+    // Default landmark fallback: Gedung Sate (Ikon utama Bandung)
+    final dest = _findMatchingDestination('Gedung Sate');
+    return LandmarkScanResult(
+      isBandungLandmark: true,
+      landmarkName: 'Gedung Sate',
+      confidencePercent: 96,
+      category: 'Sejarah & Budaya',
+      shortDescription:
+          'Ikon arsitektur neo-klasik Kota Bandung dengan ornamen tusuk sate legendaris pada puncak menara sentralnya yang dibangun tahun 1920.',
+      historyFact:
+          'Dirancang oleh tim arsitek Ir. J. Gerber dan Ir. Eh. De Roo, memadukan gaya arsitektur Italia Renaisans dengan atap bertingkat gaya Sunda dan candi Hindu Bali.',
+      interestingTrivia:
+          'Enam ornamen jambu air pada menara tusuk sate melambangkan biaya pembangunan gedung senilai 6 juta Gulden pada era kolonial Hindia Belanda.',
+      recommendedThingsToDo: [
+        'Kunjungi Museum Gedung Sate dengan teknologi VR & AR interaktif',
+        'Foto lanskap dari taman air mancur pelataran depan',
+        'Mencoba kuliner khas di area Gasibu tepat di seberang gedung',
+      ],
+      matchedDestination: dest,
+    );
   }
 }

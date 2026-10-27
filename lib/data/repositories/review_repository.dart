@@ -207,7 +207,7 @@ class ReviewRepository extends ChangeNotifier {
     _reviews.addAll([
       DestinationReview(
         id: 'rev_seed_1',
-        destinationId: 'dest_01', // Tangkuban Perahu
+        destinationId: 'dest_03', // Tangkuban Parahu
         userName: 'Siti Nurhaliza',
         rating: 5.0,
         comment:
@@ -222,7 +222,7 @@ class ReviewRepository extends ChangeNotifier {
       ),
       DestinationReview(
         id: 'rev_seed_2',
-        destinationId: 'dest_01',
+        destinationId: 'dest_03', // Tangkuban Parahu
         userName: 'Rian Pratama',
         rating: 4.5,
         comment:
@@ -248,7 +248,7 @@ class ReviewRepository extends ChangeNotifier {
       ),
       DestinationReview(
         id: 'rev_seed_4',
-        destinationId: 'dest_03', // Jalan Braga
+        destinationId: 'dest_04', // Jalan Braga
         userName: 'Alifia Putri',
         rating: 5.0,
         comment:
@@ -262,7 +262,7 @@ class ReviewRepository extends ChangeNotifier {
       ),
       DestinationReview(
         id: 'rev_seed_5',
-        destinationId: 'dest_04', // Gedung Sate
+        destinationId: 'dest_01', // Gedung Sate
         userName: 'Dimas Arya',
         rating: 4.8,
         comment:
@@ -286,7 +286,7 @@ class ReviewRepository extends ChangeNotifier {
       ),
       DestinationReview(
         id: 'rev_seed_7',
-        destinationId: 'dest_06', // Orchid Forest Cikole
+        destinationId: 'dest_13', // Orchid Forest Cikole
         userName: 'Farhan Hidayat',
         rating: 5.0,
         comment:

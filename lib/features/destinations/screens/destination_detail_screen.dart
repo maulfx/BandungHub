@@ -9,6 +9,7 @@ import '../../../models/destination.dart';
 import '../../../services/map_service.dart';
 import '../../map/screens/destination_map_screen.dart';
 import '../widgets/destination_reviews_section.dart';
+import '../../../data/repositories/review_repository.dart';
 
 class DestinationDetailScreen extends StatefulWidget {
   final Destination destination;
@@ -22,6 +23,13 @@ class DestinationDetailScreen extends StatefulWidget {
 
 class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   final _repository = DestinationRepository();
+  final _reviewRepo = ReviewRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    _reviewRepo.fetchDestinationReviewsFromCloud(widget.destination.id);
+  }
 
   String _formatCurrency(double amount) {
     if (amount <= 0) return 'Gratis (Tanpa Tiket Masuk)';
@@ -259,9 +267,15 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
     final catIcon = AppColors.getCategoryIcon(destination.category);
 
     return ListenableBuilder(
-      listenable: _repository,
+      listenable: Listenable.merge([_repository, _reviewRepo]),
       builder: (context, _) {
         final isFav = _repository.isFavorite(destination.id);
+        final reviews = _reviewRepo.getReviewsForDestination(destination.id);
+        final effectiveRating = _reviewRepo.getAverageRating(
+          destination.id,
+          fallback: destination.rating,
+        );
+        final reviewCount = reviews.length;
 
         return Scaffold(
           body: CustomScrollView(
@@ -512,7 +526,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      destination.rating.toStringAsFixed(1),
+                                      effectiveRating.toStringAsFixed(1),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -524,7 +538,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${destination.reviewCount} Ulasan',
+                                  '$reviewCount Ulasan',
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: AppColors.textSecondaryLight,

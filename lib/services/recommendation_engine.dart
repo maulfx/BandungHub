@@ -1,3 +1,4 @@
+import '../data/repositories/review_repository.dart';
 import '../models/destination.dart';
 import '../models/recommendation_result.dart';
 import '../models/travel_preference.dart';
@@ -129,15 +130,23 @@ class RecommendationEngine {
         reasons.add('Cocok dengan minat: ${matchedInterests.join(', ')}');
       }
 
+      final effectiveRating = ReviewRepository().getAverageRating(
+        dest.id,
+        fallback: dest.rating,
+      );
+      final reviewCount = ReviewRepository().getReviewsForDestination(dest.id).length;
+
       // 4. Rating & Quality Bonus (Max 15 points)
       // Scale rating 4.0 - 5.0 to 5 - 12 points
-      final ratingPoints = ((dest.rating - 3.5) / 1.5 * 12.0).clamp(0.0, 12.0);
+      final ratingPoints = ((effectiveRating - 3.5) / 1.5 * 12.0).clamp(0.0, 12.0);
       final verifiedPoints = dest.isVerified ? 3.0 : 0.0;
       score += (ratingPoints + verifiedPoints);
 
-      if (dest.rating >= 4.6) {
+      if (effectiveRating >= 4.6) {
         reasons.add(
-          'Rating tinggi (${dest.rating.toStringAsFixed(1)}★ dari ${dest.reviewCount} ulasan)',
+          reviewCount > 0
+              ? 'Rating tinggi (${effectiveRating.toStringAsFixed(1)}★ dari $reviewCount ulasan)'
+              : 'Rating tinggi (${effectiveRating.toStringAsFixed(1)}★ rekomendasi BandungHub)',
         );
       }
 

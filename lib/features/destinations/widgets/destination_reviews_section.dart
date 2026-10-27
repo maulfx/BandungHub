@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/offline_sync_repository.dart';
@@ -9,6 +10,7 @@ import '../../../models/destination.dart';
 import '../../../models/sync_queue_item.dart';
 import '../../../services/network_connectivity_service.dart';
 import '../../../services/review_blockchain_service.dart';
+import '../../../services/sepolia_anchor_service.dart';
 
 class DestinationReviewsSection extends StatefulWidget {
   final Destination destination;
@@ -361,120 +363,243 @@ class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
   }
 
   void _openBlockDetailDialog(BuildContext context, String reviewId) {
-    final block = ReviewBlockchainService().getBlockForReview(reviewId);
+    bool isAnchoring = false;
 
     showDialog(
       context: context,
       builder: (ctx) {
-        if (block == null) {
-          return AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.shield_outlined, color: Colors.teal),
-                SizedBox(width: 8),
-                Text('Status Blockchain', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            content: const Text(
-              'Blok untuk ulasan ini sedang dalam proses antrean penambangan (mining) atau belum disinkronkan.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Tutup'),
-              ),
-            ],
-          );
-        }
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final block = ReviewBlockchainService().getBlockForReview(reviewId);
 
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            if (block == null) {
+              return AlertDialog(
+                title: const Row(
+                  children: [
+                    Icon(Icons.shield_outlined, color: Colors.teal),
+                    SizedBox(width: 8),
+                    Text('Status Blockchain', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
+                content: const Text(
+                  'Blok untuk ulasan ini sedang dalam proses antrean penambangan (mining) atau belum disinkronkan.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              );
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.verified_user_rounded, color: Colors.teal, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Blok #${block.index} Terverifikasi',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const Text(
-                              'Review Blockchain Ledger',
-                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                            child: const Icon(Icons.verified_user_rounded, color: Colors.teal, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Blok #${block.index} Terverifikasi',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                const Text(
+                                  'Review Blockchain Ledger',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.teal, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Integritas data ulasan tervalidasi secara kriptografis & bebas manipulasi.',
+                                style: TextStyle(fontSize: 11.5, color: Colors.teal.shade900, fontWeight: FontWeight.w500),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle_rounded, color: Colors.teal, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Integritas data ulasan tervalidasi secara kriptografis & bebas manipulasi.',
-                            style: TextStyle(fontSize: 11.5, color: Colors.teal.shade900, fontWeight: FontWeight.w500),
+                      const SizedBox(height: 14),
+                      _buildDetailRow('Pengulas', block.userName),
+                      _buildDetailRow('Rating', '${block.rating} ★'),
+                      _buildDetailRow('Waktu Pencatatan', DateFormat('d MMMM yyyy HH:mm:ss', 'id_ID').format(block.timestamp)),
+                      _buildDetailRow('Destinasi ID', block.destinationId),
+                      const SizedBox(height: 10),
+                      const Text('Current Block Hash (SHA-256):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      _buildHashSnippet(context, block.hash),
+                      const SizedBox(height: 10),
+                      const Text('Previous Block Hash:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      _buildHashSnippet(context, block.previousHash),
+                      const SizedBox(height: 14),
+
+                      // Bagian Ethereum Sepolia Anchoring
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: (block.txHash != null)
+                              ? Colors.indigo.withValues(alpha: 0.08)
+                              : Colors.amber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: (block.txHash != null)
+                                ? Colors.indigo.withValues(alpha: 0.3)
+                                : Colors.amber.withValues(alpha: 0.4),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _buildDetailRow('Pengulas', block.userName),
-                  _buildDetailRow('Rating', '${block.rating} ★'),
-                  _buildDetailRow('Waktu Pencatatan', DateFormat('d MMMM yyyy HH:mm:ss', 'id_ID').format(block.timestamp)),
-                  _buildDetailRow('Destinasi ID', block.destinationId),
-                  const SizedBox(height: 10),
-                  const Text('Current Block Hash (SHA-256):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  _buildHashSnippet(context, block.hash),
-                  const SizedBox(height: 10),
-                  const Text('Previous Block Hash:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  _buildHashSnippet(context, block.previousHash),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  block.txHash != null
+                                      ? Icons.public_rounded
+                                      : Icons.cloud_queue_rounded,
+                                  size: 18,
+                                  color: block.txHash != null ? Colors.indigo : Colors.amber.shade800,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    block.txHash != null
+                                        ? 'Ethereum Sepolia Testnet (On-Chain)'
+                                        : 'Sepolia Anchoring Status',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: block.txHash != null ? Colors.indigo.shade900 : Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            if (block.txHash != null) ...[
+                              const Text(
+                                'TxHash (Bukti Transaksi Publik):',
+                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              _buildHashSnippet(context, block.txHash!),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final url = Uri.parse(SepoliaAnchorService.getEtherscanUrl(block.txHash!));
+                                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                                  },
+                                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                                  label: const Text('Lihat di Sepolia Etherscan', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.indigo,
+                                    side: const BorderSide(color: Colors.indigo),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              Text(
+                                'Hash tersimpan di ledger lokal. Blok ini dapat ditambatkan ke Ethereum Sepolia untuk pembuktian publik.',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: isAnchoring
+                                      ? null
+                                      : () async {
+                                          setDialogState(() => isAnchoring = true);
+                                          final tx = await ReviewBlockchainService().anchorBlock(block);
+                                          setDialogState(() => isAnchoring = false);
+                                          if (tx == null && context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Gagal menambatkan: Saldo Sepolia ETH 0 atau jaringan offline. Silakan klaim faucet terlebih dahulu.',
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                  icon: isAnchoring
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.anchor_rounded, size: 16),
+                                  label: Text(
+                                    isAnchoring ? 'Menambatkan ke Sepolia...' : 'Anchor ke Sepolia Sekarang',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.teal.shade800,
+                                    side: BorderSide(color: Colors.teal.shade600),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      child: const Text('Tutup Verifikasi'),
-                    ),
+
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Tutup Verifikasi'),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

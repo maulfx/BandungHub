@@ -7,6 +7,7 @@ import '../../../models/chat_message.dart';
 import '../../../models/destination.dart';
 import '../../../services/ai_assistant_service.dart';
 import '../../destinations/screens/destination_detail_screen.dart';
+import '../../lens/screens/bandung_lens_screen.dart';
 import '../widgets/formatted_message_view.dart';
 
 class AiChatScreen extends StatefulWidget {
@@ -395,6 +396,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Pindai Landmark (Bandung AI Lens)',
+                    icon: const Icon(
+                      Icons.camera_enhance_rounded,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BandungLensScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
                   Container(
                     decoration: const BoxDecoration(
                       color: AppColors.primary,

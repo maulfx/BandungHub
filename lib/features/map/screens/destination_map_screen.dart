@@ -57,7 +57,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
   // Routing & Transportation Mode State
   final RoutingService _routingService = RoutingService();
-  TransportMode _selectedTransportMode = TransportMode.car;
+  TransportMode _selectedTransportMode = TransportMode.motorcycle;
   List<LatLng> _currentRoutePoints = [];
   RouteDetails? _currentRouteDetails;
   bool _isLoadingRoute = false;
@@ -627,21 +627,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                       ),
                     ),
 
-                  // Transit Station Markers (Stasiun Keberangkatan & Kedatangan)
-                  if (_isNavigating &&
-                      _selectedTransportMode == TransportMode.transit &&
-                      _currentRouteDetails?.transitDetails != null) ...[
-                    _buildStationMarker(
-                      _currentRouteDetails!.transitDetails!.originStation,
-                      'Stasiun Keberangkatan',
-                      Colors.orange.shade800,
-                    ),
-                    _buildStationMarker(
-                      _currentRouteDetails!.transitDetails!.destStation,
-                      'Stasiun Kedatangan',
-                      const Color(0xFF6A1B9A),
-                    ),
-                  ],
                   // Destination Markers
                   ...filteredDestinations.map((dest) {
                     final isSelected = _selectedDestination?.id == dest.id;
@@ -1709,7 +1694,7 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
 
           const Divider(height: 1),
 
-          // Google Maps-Style Transport Mode Selector Tabs
+          // Google Maps-Style Transport Mode Selector Tabs (Motor & Mobil)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Row(
@@ -1717,13 +1702,13 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 final isSelected = m == _selectedTransportMode;
                 return Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () => _onTransportModeChanged(m),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? m.routeColor
@@ -1736,26 +1721,24 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                             width: isSelected ? 1.5 : 1,
                           ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               m.icon,
-                              size: 16,
+                              size: 18,
                               color: isSelected ? Colors.white : m.routeColor,
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(width: 8),
                             Text(
                               m.label,
                               style: TextStyle(
-                                fontSize: 9.5,
+                                fontSize: 13,
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.w600,
                                 color: isSelected ? Colors.white : m.routeColor,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1803,167 +1786,8 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
               ],
             ),
           ),
-
-          // Transit 3-stage multimodal itinerary breakdown
-          if (_selectedTransportMode == TransportMode.transit &&
-              details?.transitDetails != null)
-            _buildTransitItineraryCard(details!.transitDetails!),
         ],
       ),
-    );
-  }
-
-  /// Builds a visual itinerary card showing the 3 distinct stages of transit travel.
-  Widget _buildTransitItineraryCard(TransitTripDetails transit) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF6A1B9A).withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF6A1B9A).withValues(alpha: 0.22),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.alt_route_rounded,
-                size: 15,
-                color: Color(0xFF6A1B9A),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'Perjalanan Multimoda 3 Tahap',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6A1B9A),
-                ),
-              ),
-              const Spacer(),
-              InkWell(
-                onTap: () {
-                  MapService.openExternalMapNavigation(
-                    latitude: _selectedDestination!.latitude,
-                    longitude: _selectedDestination!.longitude,
-                    destinationName: _selectedDestination!.name,
-                    mode: TransportMode.transit,
-                  );
-                },
-                child: const Text(
-                  'Jadwal KAI ➔',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF6A1B9A),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Tahap 1: Akses ke Stasiun Asal
-          _buildTransitStepRow(
-            icon: Icons.directions_bike_rounded,
-            iconColor: Colors.orange.shade800,
-            title: 'Ke ${transit.originStation.name}',
-            subtitle:
-                'Kendaraan/jalan kaki (${transit.firstMileKm.toStringAsFixed(1)} km • ${transit.firstMileMinutes} mnt)',
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 10),
-            child: SizedBox(
-              height: 10,
-              child: VerticalDivider(
-                width: 1,
-                thickness: 1.5,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          // Tahap 2: Naik Kereta Api (Rel)
-          _buildTransitStepRow(
-            icon: Icons.train_rounded,
-            iconColor: const Color(0xFF6A1B9A),
-            title: 'Naik KA (${transit.originStation.line})',
-            subtitle:
-                'Menyusuri rel KA: ${transit.originStation.name} ➔ ${transit.destStation.name} (${transit.trainKm.toStringAsFixed(1)} km • ${transit.trainMinutes} mnt)',
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 10),
-            child: SizedBox(
-              height: 10,
-              child: VerticalDivider(
-                width: 1,
-                thickness: 1.5,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          // Tahap 3: Dari Stasiun Tujuan ke Tempat Wisata
-          _buildTransitStepRow(
-            icon: Icons.place_rounded,
-            iconColor: Colors.teal.shade800,
-            title: 'Ke ${_selectedDestination!.name}',
-            subtitle:
-                'Dari ${transit.destStation.name} (${transit.lastMileKm.toStringAsFixed(1)} km • ${transit.lastMileMinutes} mnt)',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransitStepRow({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: iconColor,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(icon, color: Colors.white, size: 12),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 9.5,
-                  color: AppColors.textSecondaryLight,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -1974,74 +1798,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
       _userLocation ?? LocationService.defaultBandungCenter,
       _selectedDestination!.coordinates,
     ];
-
-    final transit = _currentRouteDetails?.transitDetails;
-    if (_selectedTransportMode == TransportMode.transit && transit != null) {
-      final list = <Polyline>[];
-
-      // 1. First mile: Akses kendaraan / jalan kaki ke stasiun keberangkatan
-      if (transit.firstMilePoints.isNotEmpty) {
-        list.add(
-          Polyline(
-            points: transit.firstMilePoints,
-            color: Colors.orange.shade700.withValues(alpha: 0.35),
-            strokeWidth: 8.0,
-          ),
-        );
-        list.add(
-          Polyline(
-            points: transit.firstMilePoints,
-            color: Colors.orange.shade800,
-            strokeWidth: 4.5,
-          ),
-        );
-      }
-
-      // 2. Train segment: Menyusuri rel kereta api antar stasiun
-      if (transit.trainTrackPoints.isNotEmpty) {
-        list.add(
-          Polyline(
-            points: transit.trainTrackPoints,
-            color: const Color(0xFF311B92).withValues(alpha: 0.45),
-            strokeWidth: 10.0,
-          ),
-        );
-        list.add(
-          Polyline(
-            points: transit.trainTrackPoints,
-            color: const Color(0xFF6A1B9A),
-            strokeWidth: 6.0,
-          ),
-        );
-        list.add(
-          Polyline(
-            points: transit.trainTrackPoints,
-            color: Colors.white.withValues(alpha: 0.8),
-            strokeWidth: 2.0,
-          ),
-        );
-      }
-
-      // 3. Last mile: Akses kendaraan / jalan kaki dari stasiun kedatangan ke tempat wisata
-      if (transit.lastMilePoints.isNotEmpty) {
-        list.add(
-          Polyline(
-            points: transit.lastMilePoints,
-            color: Colors.teal.shade700.withValues(alpha: 0.35),
-            strokeWidth: 8.0,
-          ),
-        );
-        list.add(
-          Polyline(
-            points: transit.lastMilePoints,
-            color: Colors.teal.shade800,
-            strokeWidth: 4.5,
-          ),
-        );
-      }
-
-      return list;
-    }
 
     final points =
         _currentRoutePoints.isNotEmpty ? _currentRoutePoints : fallbackPoints;
@@ -2057,70 +1813,6 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
         strokeWidth: 5.0,
       ),
     ];
-  }
-
-  /// Marker for train stations during transit navigation.
-  Marker _buildStationMarker(
-    TrainStationInfo station,
-    String role,
-    Color color,
-  ) {
-    return Marker(
-      point: station.coordinates,
-      width: 140,
-      height: 46,
-      alignment: Alignment.topCenter,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black38,
-              blurRadius: 6,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.train_rounded, color: Colors.white, size: 14),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    role,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                  ),
-                  Text(
-                    station.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showCompassInfoDialog() {

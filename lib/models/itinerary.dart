@@ -122,6 +122,12 @@ class Itinerary {
     return totalTicketCost + transportationCost + foodCost + additionalCost;
   }
 
+  // Cost per person
+  double get costPerPerson {
+    final count = numberOfPeople > 0 ? numberOfPeople : 1;
+    return totalEstimatedBudget / count;
+  }
+
   // Group items by day number (e.g. Day 1 -> [items], Day 2 -> [items])
   Map<int, List<ItineraryItem>> get itemsByDay {
     final Map<int, List<ItineraryItem>> map = {};

@@ -49,6 +49,6 @@ void main() {
 
     // Verify action buttons
     expect(find.text('Mulai Eksplorasi'), findsOneWidget);
-    expect(find.text('Filter Preferensi'), findsOneWidget);
+    expect(find.text('Tanya Kang Bandung (AI)'), findsOneWidget);
   });
 }
