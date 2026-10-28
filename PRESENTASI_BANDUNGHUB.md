@@ -2,251 +2,297 @@
 # BandungHub: Smart Tourism & Heritage Navigator Kota Bandung
 
 > **Catatan Penggunaan:**
-> Dokumen ini disusun sebagai panduan lengkap materi slide PowerPoint (PPT) / Canva / Google Slides. Setiap slide telah dilengkapi dengan **Isi Visual Slide (Poin Ringkas)**, **Catatan Pembicara (Speaker Notes/Naskah Presentasi)**, dan **Rekomendasi Visual/Tangkapan Layar**.
+> Dokumen ini disusun sebagai panduan lengkap materi slide PowerPoint (PPT) / Canva / Google Slides untuk Sidang & Presentasi Projek Akhir Mata Kuliah **Pemrograman Aplikasi Mobile (PAM)**.
 > 
-> *Versi Pembaruan Terkini: Telah diselaraskan dengan integrasi Ethereum Sepolia Blockchain Anchor, AI Travel Assistant Adaptif, Sensor Kompas Halus, dan Pembaruan Sistem Keamanan PIN & Biometrik Profil.*
+> Setiap slide telah dilengkapi dengan **Isi Visual Slide (Poin Ringkas)**, **Catatan Pembicara (Speaker Notes/Naskah Presentasi)**, **Rekomendasi Visual/Tangkapan Layar**, serta **Matriks Pemenuhan Rubrik Penilaian 100%**.
 
 ---
 
 ## DAFTAR ISI SLIDE
-1. [Slide 1: Judul & Identitas Proyek](#slide-1-judul--identitas-proyek)
-2. [Slide 2: Latar Belakang & Rumusan Masalah](#slide-2-latar-belakang--rumusan-masalah)
-3. [Slide 3: Solusi Produk - BandungHub](#slide-3-solusi-produk---bandunghub)
-4. [Slide 4: Arsitektur Sistem & Teknologi Terkini](#slide-4-arsitektur-sistem--teknologi-terkini)
-5. [Slide 5: Katalog 38 Destinasi Wisata & Budaya](#slide-5-katalog-38-destinasi-wisata--budaya)
-6. [Slide 6: Rencana Perjalanan Pintar, Konversi Multi-Mata Uang & Zona Waktu](#slide-6-rencana-perjalanan-pintar-konversi-multi-mata-uang--zona-waktu)
-7. [Slide 7: Peta Interaktif, Navigasi Kendaraan (Motor & Mobil) & Kompas Presisi](#slide-7-peta-interaktif-navigasi-kendaraan-motor--mobil--kompas-presisi)
-8. [Slide 8: Ekosistem AI Cerdas & Integritas Ulasan Blockchain Sepolia](#slide-8-ekosistem-ai-cerdas--integritas-ulasan-blockchain-sepolia)
-9. [Slide 9: Ketahanan Data (Offline-First) & Keamanan Akun Berlapis](#slide-9-ketahanan-data-offline-first--keamanan-akun-berlapis)
-10. [Slide 10: Pengujian Sistem & Jaminan Kualitas Kode](#slide-10-pengujian-sistem--jaminan-kualitas-kode)
-11. [Slide 11: Demo Alur Pengguna (User Journey)](#slide-11-demo-alur-pengguna-user-journey)
-12. [Slide 12: Kesimpulan & Sesi Tanya Jawab (Q&A)](#slide-12-kesimpulan--sesi-tanya-jawab-qa)
+1. [Slide 1: Judul, Identitas Proyek & Konsep Utama](#slide-1-judul-identitas-proyek--konsep-utama)
+2. [Slide 2: Latar Belakang & Rumusan Masalah Wisatawan](#slide-2-latar-belakang--rumusan-masalah-wisatawan)
+3. [Slide 3: Solusi Produk & Arsitektur Fitur Terintegrasi](#slide-3-solusi-produk--arsitektur-fitur-terintegrasi)
+4. [Slide 4: Arsitektur Database (SQLite + Supabase Non-Firebase), Session & Web Service API](#slide-4-arsitektur-database-sqlite--supabase-non-firebase-session--web-service-api)
+5. [Slide 5: Katalog 38 Destinasi, Fasilitas Pencarian Cerdas & Pemilihan Filter](#slide-5-katalog-38-destinasi-fasilitas-pencarian-cerdas--pemilihan-filter)
+6. [Slide 6: Rencana Perjalanan, Konversi Multi-Mata Uang (10 Valuta) & Konversi Zona Waktu (WIB, WITA, WIT, London)](#slide-6-rencana-perjalanan-konversi-multi-mata-uang-10-valuta--konversi-zona-waktu-wib-wita-wit-london)
+7. [Slide 7: Fasilitas LBS (Peta & Rute Kendaraan) & Integrasi Multi-Sensor (Magnetometer, Accelerometer, Gyroscope)](#slide-7-fasilitas-lbs-peta--rute-kendaraan--integrasi-multi-sensor-magnetometer-accelerometer-gyroscope)
+8. [Slide 8: Ekosistem AI (AI Lens Vision & LLM Chatbot Kang Bandung) & Blockchain Ulasan Sepolia](#slide-8-ekosistem-ai-ai-lens-vision--llm-chatbot-kang-bandung--blockchain-ulasan-sepolia)
+9. [Slide 9: Sistem Keamanan Sesi Bank, Login Biometrik & Menu Profil Lengkap (Avatar, Saran & Kesan Kuliah PAM, Logout)](#slide-9-sistem-keamanan-sesi-bank-login-biometrik--menu-profil-lengkap-avatar-saran--kesan-kuliah-pam-logout)
+10. [Slide 10: Notifikasi Mobile Cerdas, Gamifikasi Wisata (Bocchi Jumpy) & Pengujian Sistem (28/28 Tests Passed)](#slide-10-notifikasi-mobile-cerdas-gamifikasi-wisata-bocchi-jumpy--pengujian-sistem-2828-tests-passed)
+11. [Slide 11: Demo Alur Pengguna Terpadu (User Journey)](#slide-11-demo-alur-pengguna-terpadu-user-journey)
+12. [Slide 12: Matriks Pemenuhan 100% Rubrik Penilaian Projek Akhir PAM](#slide-12-matriks-pemenuhan-100-rubrik-penilaian-projek-akhir-pam)
+13. [Slide 13: Kesimpulan & Sesi Tanya Jawab (Q&A)](#slide-13-kesimpulan--sesi-tanya-jawab-qa)
 
 ---
 
-### Slide 1: Judul & Identitas Proyek
+### Slide 1: Judul, Identitas Proyek & Konsep Utama
 * **Judul Slide:** BandungHub
-* **Subjudul:** Aplikasi Mobile Smart Tourism & Heritage Navigator Kota Bandung Berbasis Flutter, Supabase Cloud & Sepolia Blockchain
+* **Subjudul:** Aplikasi Mobile Smart Tourism & Heritage Navigator Kota Bandung
 * **Poin Utama di Slide:**
-  * Proyek Akhir Praktikum Pemrograman Mobile
-  * Platform: Mobile (Android & iOS)
-  * Framework: Flutter 3.x (Dart)
-  * Backend & Cloud: Supabase Cloud Database (PostgreSQL) + Auth
-  * Local Storage: SQLite (`sqflite`) Resilient Offline Storage
-  * Smart Features: Google Gemini AI (Vision & Assistant) + Ethereum Sepolia Testnet Anchor
-  * Nama Pengembang / Tim: [Nama Anda / NIM]
+  * **Mata Kuliah:** Projek Akhir Pemrograman Aplikasi Mobile (PAM)
+  * **Platform:** Multiplatform Mobile (Android & iOS) berbasis Flutter 3.x (Dart)
+  * **Konsep Utama:** Platform pemandu wisata cerdas (*Smart Travel Companion*) yang memadukan navigasi geospasial LBS, ketahanan data *Offline-First* SQLite, kecerdasan buatan Gemini AI (Multimodal Vision & LLM Concierge), dan transparansi ulasan terdesentralisasi via Blockchain Ethereum Sepolia.
+  * **Tim Pengembang:** [Nama Anda / NIM & Rekan Tim]
 * **Rekomendasi Visual:**
-  * Logo BandungHub di bagian tengah/kiri.
-  * Mockup layar HP menampilkan beranda BandungHub dengan kartu destinasi Gedung Sate / Braga.
+  * Logo BandungHub (siluet Tangkuban Parahu dan daun teh hijau Parahyangan).
+  * Mockup 2 smartphone menampilkan Beranda dan Peta Navigasi BandungHub.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Selamat pagi/siang Bapak/Ibu dosen penguji serta rekan-rekan sekalian. Pada kesempatan kali ini, saya akan mempresentasikan karya Projek Akhir Pemrograman Mobile saya yang berjudul **BandungHub: Smart Tourism & Heritage Navigator Kota Bandung**. Aplikasi ini dirancang sebagai platform pariwisata pintar terintegrasi yang memadukan keindahan budaya Parahyangan, efisiensi perencana liburan, kecerdasan buatan Gemini AI, serta transparansi ulasan terdesentralisasi berbasis Blockchain Ethereum Sepolia."
+  > "Selamat pagi/siang Bapak/Ibu dosen penguji serta rekan-rekan sekalian. Pada kesempatan kali ini, kami mempresentasikan karya Projek Akhir Pemrograman Aplikasi Mobile yang berjudul **BandungHub: Smart Tourism & Heritage Navigator Kota Bandung**. BandungHub hadir bukan sekadar katalog pariwisata statis, melainkan ekosistem asisten perjalanan cerdas yang mengintegrasikan layanan LBS, kecerdasan buatan, multi-sensor perangkat, ketahanan offline SQLite, hingga integritas ulasan berbasis blockchain."
 
 ---
 
-### Slide 2: Latar Belakang & Rumusan Masalah
-* **Judul Slide:** Latar Belakang & Tantangan Wisatawan
+### Slide 2: Latar Belakang & Rumusan Masalah Wisatawan
+* **Judul Slide:** Latar Belakang & Tantangan Nyata Wisatawan
 * **Poin Utama di Slide:**
-  * 🔴 **Informasi Tersebar & Tidak Sinkron:** Informasi tiket, jam operasional, dan lokasi wisata Bandung sering kali tidak mutakhir dan terpecah di berbagai kanal media sosial.
-  * 🔴 **Kendala Jaringan di Kawasan Wisata:** Sinyal internet sering kali lemah atau hilang saat wisatawan berada di daerah dataran tinggi (Ciwidey, Lembang, Pangalengan).
-  * 🔴 **Perencanaan Perjalanan & Budget yang Rumit:** Wisatawan kesulitan menyusun rute efisien, membagi waktu per hari, dan memperhitungkan anggaran liburan (terlebih bagi wisatawan mancanegara).
-  * 🔴 **Keraguan Integritas Ulasan Wisata:** Banyak ulasan online yang rentan dipalsukan atau dimanipulasi oleh pihak pengelola untuk menaikkan rating secara tidak jujur.
+  * 🔴 **Informasi Tersebar & Tidak Sinkron:** Detail harga tiket, jam operasional, dan lokasi wisata sering kali usang dan terpecah di berbagai media sosial.
+  * 🔴 **Kendala Jaringan di Daerah Blank Spot:** Sinyal internet sering kali lemah atau hilang total saat wisatawan berada di daerah perbukitan/pegunungan (Lembang, Ciwidey, Pangalengan).
+  * 🔴 **Kerumitan Navigasi & Kemacetan Khas Bandung:** Sulitnya membedakan rute aman untuk sepeda motor (non-tol) dan kendaraan roda empat (tol Pasteur/Pasupati).
+  * 🔴 **Kalkulasi Anggaran & Perbedaan Waktu Wisatawan Global:** Turis asing kebingungan mengonversi estimasi biaya ke mata uang asalnya serta menyesuaikan jadwal liburan dengan zona waktu asalnya.
+  * 🔴 **Keraguan Keaslian Ulasan:** Maraknya ulasan daring yang rawan dimanipulasi secara sepihak untuk mendongkrak popularitas destinasi secara tidak jujur.
 * **Rekomendasi Visual:**
-  * Ilustrasi 4 ikon masalah (Koneksi lemah/No Signal, Kemacetan rute, Jadwal & Budget bentrok, Ulasan bias/dimanipulasi).
+  * 4 Ikon Masalah: No Signal / Blank Spot, Kemacetan Jalan, Kerumitan Konversi Kurs/Waktu, dan Ulasan Tidak Terverifikasi.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Kota Bandung merupakan salah satu magnet wisata utama di Indonesia. Namun, wisatawan di lapangan kerap menghadapi kendala nyata: sinyal internet yang drop saat berada di Lembang atau Ciwidey, kebingungan mengatur rute agar tidak terjebak macet, anggaran yang membengkak tanpa kalkulasi jelas, serta keraguan akan keaslian ulasan di internet. Dari persoalan tersebut, BandungHub dikembangkan dengan arsitektur offline-first, navigasi cerdas, asisten AI, dan pencatatan ulasan anti-manipulasi."
+  > "Kawasan Bandung Raya merupakan salah satu destinasi wisata terpadat di Indonesia. Kendala utama wisatawan di lapangan adalah sinyal yang drop di daerah perbukitan, rute jalan alternatif yang membingungkan bagi pengendara motor, kalkulasi biaya liburan yang tidak praktis bagi turis mancanegara, serta keraguan akan keaslian ulasan di internet. BandungHub dirancang secara khusus untuk menjawab seluruh permasalahan tersebut secara tuntas."
 
 ---
 
-### Slide 3: Solusi Produk - BandungHub
+### Slide 3: Solusi Produk & Arsitektur Fitur Terintegrasi
 * **Judul Slide:** Solusi: BandungHub Smart Tourism Ecosystem
 * **Poin Utama di Slide:**
-  * 🟢 **38 Destinasi Terkurasi Lengkap:** 5 kategori tematik (Sejarah & Budaya, Alam, Keluarga, Kuliner Legendaris, Hiburan Modern).
-  * 🟢 **Bandung AI Duo (Vision & Chatbot):**
-    * *Bandung AI Lens:* Pindai visual cagar budaya secara instan dengan Google Gemini AI Vision.
-    * *Bandung AI Assistant:* Chatbot pemandu lokal interaktif dengan respon kontekstual adaptif (ringkas/detail).
-  * 🟢 **Perencana Perjalanan Cerdas (Itinerary Planner):** Kalkulator budget otomatis, konversi multi-mata uang dunia, dan penyesuaian zona waktu global.
-  * 🟢 **Peta & Navigasi Multi-Moda Nyata:** Navigasi interaktif Sepeda Motor (non-tol) & Mobil (tol/arteri) via OpenStreetMap + Kompas digital halus presisi 360°.
-  * 🟢 **Integritas Ulasan Berbasis Ethereum Sepolia Blockchain:** Ulasan diamankan kriptografi SHA-256 berantai dan di-anchor ke jaringan publik Sepolia Testnet (dapat diverifikasi via Etherscan).
-  * 🟢 **Arsitektur Offline-First & Keamanan Berlapis:** Berjalan mulus tanpa sinyal internet melalui SQLite lokal, diamankan PIN 6-digit & Biometrik ala perbankan.
+  * 🟢 **38 Destinasi Terkurasi Lengkap:** 5 kategori tematik dengan fasilitas pencarian instan dan filter pintar.
+  * 🟢 **LBS & Rute Kendaraan Nyata:** Peta interaktif OpenStreetMap OSRM untuk Motor (non-tol) dan Mobil (jalan tol) + sensor kompas digital halus.
+  * 🟢 **Arsitektur Dual-Storage Offline-First:** Sinkronisasi cloud online Supabase (Non-Firebase) dan cache lokal tangguh SQLite (`sqflite`).
+  * 🟢 **Ekosistem AI Cerdas (Vision & LLM):** Bandung AI Lens untuk memindai visual landmark dan Bandung AI Chatbot untuk panduan lokal adaptif.
+  * 🟢 **Fitur Konversi Terpadu:** Konverter 10 mata uang dunia dan penyesuaian jadwal kunjungan pada zona waktu (WIB, WITA, WIT, London).
+  * 🟢 **Ulasan Anti-Manipulasi Blockchain Sepolia:** Hash kriptografis SHA-256 yang di-anchor langsung ke Ethereum Sepolia Testnet.
+  * 🟢 **Keamanan Akun Berlapis:** Sesi aman, sensor biometrik (sidik jari/wajah), dan PIN 6-digit keypad ala aplikasi perbankan.
+  * 🟢 **Gamifikasi Edukatif:** Mini game arkade *Bocchi Jumpy* bertema kuliner & budaya Sunda.
 * **Rekomendasi Visual:**
-  * Diagram showcase 6 pilar inovasi BandungHub mengelilingi mockup smartphone aplikasi.
+  * Diagram showcase 8 pilar inovasi BandungHub mengelilingi mockup smartphone utama.
 * **Speaker Notes (Naskah Pembicara):**
-  > "BandungHub menghadirkan ekosistem pariwisata yang lengkap dalam satu genggaman. Kami menggabungkan database 38 destinasi terkurasi, kecerdasan buatan multimodal untuk mengenali objek dan menjawab pertanyaan wisata, rute navigasi jalan nyata untuk motor dan mobil, perencana anggaran multi-mata uang, hingga inovasi Web3 di mana setiap ulasan di-anchor ke blockchain publik Ethereum Sepolia agar bebas dari manipulasi data."
+  > "Solusi yang dihadirkan BandungHub bersifat komprehensif. Mulai dari navigasi geospasial LBS multi-moda, perencana liburan dengan kalkulator budget multi-mata uang dan zona waktu, asisten cerdas AI multimodal, gamifikasi edukatif, hingga inovasi keamanan akun standar perbankan dan pencatatan ulasan di blockchain publik Ethereum Sepolia."
 
 ---
 
-### Slide 4: Arsitektur Sistem & Teknologi Terkini
-* **Judul Slide:** Arsitektur Sistem & Landasan Teknologi
+### Slide 4: Arsitektur Database (SQLite + Supabase Non-Firebase), Session & Web Service API
+* **Judul Slide:** Arsitektur Sistem, Basis Data & Integrasi API
 * **Poin Utama di Slide:**
-  * **Frontend Mobile:** Flutter 3.x (Dart) dengan pola *Clean Architecture* & *Repository Pattern* modular.
-  * **Cloud Backend & Database:** Supabase Cloud (PostgreSQL) untuk autentikasi user, katalog terpusat, ulasan real-time, dan cloud itinerary.
-  * **Local Resilient Database:** SQLite (`sqflite`) & `SharedPreferences` untuk ketahanan data saat perangkat offline (tanpa sinyal).
-  * **Map & Geospatial Routing:** `flutter_map` + OpenStreetMap API + OSRM Engine (rute jalan riil tanpa ketergantungan berbayar Google Maps API).
-  * **Hardware Sensor Fusion:** Akses magnetometer & akselerometer dengan algoritma *Low-Pass Sensor Smoothing* untuk pergerakan kompas yang halus dan presisi.
-  * **Decentralized Web3 Ledger:** Integrasi SHA-256 Chaining & RPC Ethereum Sepolia Testnet untuk pencatatan hash ulasan permanen.
-  * **Artificial Intelligence Engine:** Google Gemini REST API dengan domain guardrails khusus pariwisata Bandung.
+  * **Database & Penyimpanan Hybrid (Dual-Storage):**
+    * *Penyimpanan Lokal:* SQLite (`sqflite`) untuk menyimpan data offline 38 destinasi, session akun, preferensi, dan antrean sinkronisasi (*offline sync queue*).
+    * *Penyimpanan Online:* Supabase Cloud Database (PostgreSQL) — **100% Bebas Ketergantungan Firebase**.
+  * **Manajemen Sesi & Login Terenkripsi:**
+    * Otentikasi aman Supabase Auth & penyimpanan token terenkripsi di *Secure Storage*.
+    * Manajemen session otomatis: Auto-lock session saat aplikasi berada di latar belakang (*background timeout*) lebih dari 2 menit.
+  * **Integrasi Web Service / REST API Eksternal:**
+    * 🌐 **Supabase REST API:** Sinkronisasi cloud katalog destinasi, ulasan pengunjung, dan cloud itinerary.
+    * 🗺️ **OpenStreetMap & OSRM Engine:** API rute jalan nyata tanpa batasan kuota berbayar Google Maps API.
+    * 🤖 **Google Gemini AI REST API:** Model multimodal vision dan generative text LLM.
+    * 💱 **Open Exchange Rates API (`open.er-api.com`):** Sinkronisasi kurs valuta asing real-time dari pasar uang dunia.
+    * ⛓️ **Ethereum Sepolia RPC:** Pengiriman transaksi ulasan ke jaringan blockchain publik terdesentralisasi.
 * **Rekomendasi Visual:**
-  * Diagram alir arsitektur sistem:
-    `Flutter UI -> Services & Repositories -> [Supabase Cloud / Sepolia RPC (Online)] <-> [Local SQLite Cache (Offline)]`
+  * Diagram alir sistem:
+    `Flutter UI -> Repositories -> [Web Services (OSRM / Gemini / Forex / Sepolia)] & [Supabase Cloud] <-> [SQLite Offline Storage]`
 * **Speaker Notes (Naskah Pembicara):**
-  > "Dari sisi rekayasa perangkat lunak, BandungHub mengedepankan arsitektur hybrid yang tangguh. Aplikasi menggunakan Flutter dengan pola Repository Pattern yang rapi. Ketika ada jaringan, aplikasi terhubung ke Supabase Cloud dan RPC Ethereum Sepolia. Namun ketika berada di area blank spot, aplikasi otomatis beralih menggunakan cache SQLite lokal tanpa terjadi force close atau lag, menjamin pengalaman pengguna tetap mulus."
+  > "Sesuai dengan kriteria penilaian, aplikasi ini tidak menggunakan Firebase. Untuk backend online, kami memanfaatkan Supabase Cloud PostgreSQL, dipadukan dengan database lokal SQLite di perangkat. Ketika internet terputus, aplikasi tetap berjalan lancar 100% menggunakan SQLite. Seluruh panggilan web service—mulai dari routing OpenStreetMap OSRM, kurs forex real-time, Google Gemini AI, hingga transaksi RPC Ethereum Sepolia—dikelola melalui arsitektur Repository Pattern yang modular dan rapi."
 
 ---
 
-### Slide 5: Katalog 38 Destinasi Wisata & Budaya
-* **Judul Slide:** Katalog Eksplorasi 38 Destinasi Terkurasi
+### Slide 5: Katalog 38 Destinasi, Fasilitas Pencarian Cerdas & Pemilihan Filter
+* **Judul Slide:** Katalog Eksplorasi 38 Destinasi & Fasilitas Pencarian
 * **Poin Utama di Slide:**
-  * **5 Kategori Tematik Komprehensif:**
-    * 🏛️ **Sejarah & Budaya:** Gedung Sate, Museum KAA, Museum Geologi, Bosscha, Monumen Perjuangan, dll.
-    * 🌲 **Wisata Alam:** Kawah Putih, Tangkuban Parahu, Tahura Juanda, Ranca Upas, Tebing Keraton, Situ Patenggang.
-    * 👨‍👩‍👧‍👦 **Wisata Keluarga:** Saung Angklung Udjo, Floating Market, Farmhouse Susu, Lembang Park & Zoo, Dago Dream Park.
-    * 🍜 **Kuliner Legendaris:** Pasar Punclut, Sudirman Street Day & Night, Kopi Aroma Banceuy, Batagor Kingsley, Mie Kocok Mang Dadeng.
-    * 🎡 **Hiburan Modern:** Trans Studio Bandung, Kiara Artha Park, Paris Van Java Mall.
-  * **Kelengkapan Metadata Tiap Destinasi:** Koordinat GPS presisi, jam operasional, harga tiket masuk, rating riil tersinkron, dan galeri foto HD.
-  * **Fitur Filter Pintar:** Pencarian instan berdasarkan kata kunci, filter kategori, batas anggaran tiket, dan penanda destinasi favorit.
+  * **38 Destinasi Resmi Terkurasi dalam 5 Kategori Tematik:**
+    * 🏛️ *Sejarah & Budaya:* Gedung Sate, Museum KAA, Museum Geologi, Bosscha, dll.
+    * 🌲 *Wisata Alam:* Kawah Putih, Tangkuban Parahu, Tahura Juanda, Ranca Upas, Tebing Keraton.
+    * 👨‍👩‍👧‍👦 *Wisata Keluarga:* Saung Angklung Udjo, Floating Market, Farmhouse Susu, Lembang Park & Zoo.
+    * 🍜 *Kuliner Legendaris:* Pasar Punclut, Sudirman Street, Kopi Aroma Banceuy, Batagor Kingsley.
+    * 🎡 *Hiburan Modern:* Trans Studio Bandung, Kiara Artha Park, Paris Van Java Mall.
+  * **Fasilitas Pencarian & Pemilihan Interaktif:**
+    * 🔍 **Pencarian Instan (Live Search):** Filter langsung berdasarkan pengetikan nama destinasi atau kata kunci.
+    * 🏷️ **Pemilihan Kategori (Category Chips):** Memfilter kartu destinasi berdasarkan 5 kelompok tema secara instan.
+    * 💰 **Pemilihan Batas Anggaran (Budget Range Slider):** Memilih destinasi sesuai batas maksimal harga tiket masuk yang dimiliki wisatawan.
+    * ❤️ **Pemilihan Favorit (Bookmark):** Menandai destinasi impian untuk dimasukkan ke dalam rencana perjalanan.
+  * **Metadata Komprehensif:** Koordinat GPS presisi, jam buka-tutup, HTM, rating riil, nomor kontak pengelola, dan galeri foto HD.
 * **Rekomendasi Visual:**
-  * Cuplikan layar halaman **Katalog & Eksplorasi** menampilkan filter chip, kolom pencarian, dan grid kartu destinasi Bandung.
+  * Tangkapan layar layar *Eksplorasi* menampilkan search bar, pilihan kategori chip, slider budget, dan grid kartu destinasi.
 * **Speaker Notes (Naskah Pembicara):**
-  > "BandungHub menyediakan basis data 38 destinasi resmi yang dikelompokkan ke dalam lima kategori tematik. Setiap kartu destinasi menyajikan informasi komprehensif mulai dari harga tiket, jam buka, titik koordinat, hingga galeri foto berkualitas tinggi. Pengguna dapat langsung memfilter destinasi sesuai kategori atau menyesuaikan dengan batas budget yang dimiliki."
+  > "Katalog BandungHub memuat 38 destinasi resmi yang dikelompokkan ke dalam 5 tema wisata. Pengguna dapat dengan mudah mencari dan memilih destinasi melalui fitur live search, kategori chip, maupun slider batas anggaran tiket masuk. Setiap destinasi memiliki koordinat GPS, jam operasional, harga tiket, dan galeri foto beresolusi tinggi."
 
 ---
 
-### Slide 6: Rencana Perjalanan Pintar, Konversi Multi-Mata Uang & Zona Waktu
+### Slide 6: Rencana Perjalanan, Konversi Multi-Mata Uang (10 Valuta) & Konversi Zona Waktu (WIB, WITA, WIT, London)
 * **Judul Slide:** Perencana Perjalanan & Fitur Ramah Wisatawan Global
 * **Poin Utama di Slide:**
-  * **Penyusunan Agenda Per Hari (Daily Itinerary):** Pengelompokan destinasi berdasarkan jadwal harian (Hari 1, Hari 2, dst.) lengkap dengan estimasi jam kunjungan.
-  * **Kalkulator Budget Otomatis & Konversi Multi-Mata Uang:**
-    * 💱 **Pilihan Mata Uang Lengkap (IDR, USD, MYR, SGD, EUR, JPY, AUD, CNY, dll.):** Rincian biaya tiket, transportasi, makan, dan total per orang otomatis terkonversi secara instan sesuai kurs terkini.
-    * Wisatawan mancanegara (misal turis Malaysia atau Singapura) langsung mengetahui estimasi pengeluaran tanpa perlu membuka kalkulator kurs terpisah.
-  * **Sinkronisasi Jadwal Berdasarkan Zona Waktu (Timezone Converter):**
-    * ⏰ **Pilihan Zona Waktu Asal Pengguna (WIB, WITA, WIT, SGT/MYT, JST, EST, dll.):**
-    * Jadwal kunjungan di Bandung (WIB/UTC+7) otomatis dikonversi dan menampilkan perbandingan jam lokal wisatawan sehingga tidak ada jadwal yang terlewat.
-  * **Ekspor Dokumen Fleksibel:**
-    * 📄 **Format PDF Resmi:** Dokumen rapi siap cetak lengkap dengan tabel rincian biaya, jadwal, dan catatan perjalanan.
-    * 📝 **Format Catatan Teks:** Teks ringkas yang siap dibagikan via WhatsApp, Telegram, atau aplikasi catatan rombongan.
-  * **Penyimpanan Cloud Terikat Akun:** Seluruh rencana perjalanan tersinkron ke Supabase Cloud terhubung dengan ID pengguna.
+  * **Penyusunan Jadwal Harian (Daily Itinerary Planner):** Pengelompokan destinasi per hari (Hari 1, Hari 2, dst.) lengkap dengan jam kunjungan, catatan aktivitas, dan kalkulasi total biaya liburan.
+  * **Konversi Multi-Mata Uang Terpadu (10 Valuta Asing):**
+    * 💱 **Mata Uang Didukung:** IDR (Rupiah), USD (Dolar AS), EUR (Euro), SGD (Dolar Singapura), MYR (Ringgit Malaysia), JPY (Yen Jepang), AUD (Dolar Australia), CNY (Yuan China), SAR (Riyal Saudi), GBP (Poundsterling).
+    * Kurs diperbarui otomatis secara real-time via API dan dicache secara offline.
+    * Rincian biaya tiket, makan, transportasi, dan total per orang otomatis terkonversi secara instan pada kartu rincian anggaran.
+  * **Konversi Zona Waktu Internasional Terpadu (Dropdown Timezone Selector):**
+    * ⏰ **Pilihan Zona Waktu Lengkap:** **WIB** (Bandung UTC+7), **WITA** (Bali/Makassar UTC+8), **WIT** (Jayapura UTC+9), **London / GMT** (Inggris UTC+0), serta zona SGT, JST, EST, CET.
+    * Jadwal kunjungan di Bandung otomatis dikonversi dan menampilkan perbandingan jam lokal wisatawan sehingga wisatawan mancanegara tidak salah waktu kunjungan.
+  * **Ekspor Dokumen Siap Pakai:** Dokumen resmi berformat PDF siap cetak serta format Catatan Teks ringkas yang siap dikirim via WhatsApp.
 * **Rekomendasi Visual:**
-  * Mockup layar detail rencana perjalanan menunjukkan dropdown mata uang (USD / MYR), selector zona waktu, serta pratinjau dokumen PDF yang dihasilkan.
+  * Mockup layar detail Itinerary menampilkan dropdown mata uang (USD / MYR), pemilih zona waktu (WIB, WITA, WIT, London/GMT), dan pratinjau lembar PDF yang dihasilkan.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Fitur unggulan lainnya adalah Perencana Perjalanan Cerdas yang dirancang ramah bagi wisatawan domestik maupun mancanegara. Aplikasi menyediakan kalkulator anggaran otomatis dengan konverter multi-mata uang dunia serta pemilih zona waktu internasional, sehingga wisatawan asing dapat langsung memahami jadwal dan biaya liburan mereka. Seluruh rencana ini dapat diekspor secara instan ke format PDF resmi atau teks WhatsApp."
+  > "Memenuhi syarat rubrik konversi mata uang dan zona waktu, BandungHub menyematkan fitur ini langsung ke dalam Perencana Perjalanan. Pengguna dapat memilih 10 mata uang dunia dan seluruh estimasi biaya otomatis terkonversi. Tak hanya itu, tersedia penyesuaian zona waktu mulai dari WIB, WITA, WIT, hingga London (GMT) dan New York (EST). Hal ini sangat memudahkan wisatawan mancanegara untuk menyelaraskan jadwal perjalanan mereka sebelum diekspor ke format PDF atau teks WhatsApp."
 
 ---
 
-### Slide 7: Peta Interaktif, Navigasi Kendaraan (Motor & Mobil) & Kompas Presisi
-* **Judul Slide:** Navigasi Geospasial Multi-Moda & Kompas Digital
+### Slide 7: Fasilitas LBS (Peta & Rute Kendaraan) & Integrasi Multi-Sensor (Magnetometer, Accelerometer, Gyroscope)
+* **Judul Slide:** Fasilitas LBS & Pemanfaatan Multi-Sensor Perangkat
 * **Poin Utama di Slide:**
-  * **Peta Interaktif Wisata Bandung:** Penandaan marker warna-warni yang intuitif berdasarkan kategori destinasi di peta Bandung Raya.
-  * **Routing Kendaraan Nyata (OpenStreetMap OSRM):**
-    * 🛵 **Sepeda Motor:** Perhitungan rute cerdas non-tol melalui jalan arteri dan jalur alternatif tercepat.
-    * 🚗 **Mobil:** Perhitungan rute jalan protokol utama dengan akses jalan tol bebas hambatan (Pasteur, Pasupati, dll.).
-  * **Kompas Digital Presisi 360°:**
-    * Orientasi kompas akurat dengan perhitungan derajat 0°–360° sesuai arah mata angin riil.
-    * Menggunakan algoritma *Low-Pass Sensor Smoothing* pada data sensor gerak perangkat sehingga jarum kompas berputar mulus tanpa patah-patah (*anti-jitter*).
-    * Penempatan antarmuka yang bersih dan harmonis tanpa menutupi panel navigasi dan tombol kontrol peta.
+  * **Fasilitas Location-Based Service (LBS):**
+    * 📍 **Penentuan Posisi GPS Riil:** Menggunakan sensor GPS (`geolocator`) untuk mendeteksi posisi pengguna secara real-time.
+    * 📏 **Kalkulasi Jarak Terdekat:** Menghitung jarak dinamis pengguna ke 38 destinasi Bandung (*Haversine distance matrix*).
+    * 🗺️ **Routing Kendaraan Nyata (OpenStreetMap OSRM):**
+      * 🛵 **Sepeda Motor:** Rute non-tol melalui jalan arteri dan jalur alternatif cepat.
+      * 🚗 **Mobil:** Rute protokol utama dengan akses jalan tol bebas hambatan.
+  * **Integrasi Minimal 2 Sensor Perangkat (Aktual: 3 Sensor Aktif):**
+    * 🧭 **Sensor 1 - Magnetometer:** Mengukur vektor medan magnet bumi untuk menghitung sudut azimuth arah kompas 0°–360° secara presisi.
+    * 📐 **Sensor 2 - Accelerometer:** Mengukur vektor percepatan gravitasi bumi untuk mendeteksi kemiringan perangkat (pitch & roll), kompensasi kemiringan kompas 3D, serta kontrol gerak tilt di mini game.
+    * 🔄 **Sensor 3 - Gyroscope:** Mengukur kecepatan rotasi sudut untuk melengkapi kestabilan orientasi perangkat.
+    * 🌊 **Low-Pass Filter Sensor Smoothing:** Algoritma penyaring getaran tangan agar perputaran jarum kompas bergerak sangat halus tanpa patah-patah (*anti-jitter*).
 * **Rekomendasi Visual:**
-  * Tangkapan layar peta interaktif dengan jalur rute rute jalan nyata (motor/mobil) bersanding dengan tampilan widget kompas digital modern.
+  * Tangkapan layar peta rute navigasi kendaraan di atas, berdampingan dengan widget kompas digital presisi 360° di bawahnya.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Untuk menunjang mobilitas di jalanan Bandung yang khas, BandungHub menyediakan navigasi rute jalan nyata yang membedakan jalur mobil dan motor. Sistem otomatis memilih rute non-tol untuk pengendara roda dua. Selain itu, kami menyematkan sensor kompas digital dengan algoritma low-pass smoothing, memastikan jarum berputar mulus 360 derajat dan akurat memandu orientasi arah wisatawan di lapangan."
+  > "Untuk fasilitas LBS, BandungHub memanfaatkan GPS perangkat untuk menghitung jarak pengguna ke seluruh objek wisata dan menampilkan navigasi jalan nyata untuk sepeda motor dan mobil via OpenStreetMap. Terkait pemenuhan sensor perangkat, aplikasi kami mengintegrasikan 3 sensor sekaligus: Magnetometer untuk kompas arah 360 derajat, Accelerometer untuk deteksi kemiringan dan kemudi game, serta Gyroscope. Algoritma low-pass filter disematkan agar kompas bergerak halus tanpa getaran."
 
 ---
 
-### Slide 8: Ekosistem AI Cerdas & Integritas Ulasan Blockchain Sepolia
-* **Judul Slide:** Ekosistem AI Cerdas & Integritas Ulasan Blockchain Sepolia
+### Slide 8: Ekosistem AI (AI Lens Vision & LLM Chatbot Kang Bandung) & Blockchain Ulasan Sepolia
+* **Judul Slide:** Kecerdasan Buatan (Vision & LLM) & Ulasan Blockchain Sepolia
 * **Poin Utama di Slide:**
-  * 🤖 **Bandung AI Duo (Multimodal Vision & Smart Chatbot):**
-    * 📷 **Bandung AI Lens:** Pengenalan visual cagar budaya & landmark bersejarah (Gedung Sate, Bosscha, Braga, Kawah Putih) melalui kamera dengan Google Gemini Vision + smart offline fallback.
-    * 💬 **Bandung AI Travel Assistant:** Chatbot konsultasi wisata interaktif dengan penalaran cerdas yang adaptif (menjawab singkat & to-the-point untuk pertanyaan cepat, atau menyajikan saran mendalam saat diminta itinerary/tips liburan). Dilengkapi *domain guardrails* agar selalu fokus pada pariwisata Bandung.
-  * ⛓️ **Integritas Ulasan Berbasis Ethereum Sepolia Blockchain (Real Web3 Anchor):**
-    * Setiap ulasan yang dikirim pengguna dienkripsi dengan *SHA-256 Merkle Chaining* lokal dan secara otomatis di-anchor ke jaringan publik **Ethereum Sepolia Testnet**.
-    * **Transparansi Tanpa Rekayasa:** Pengguna dan penguji dapat menyalin hash kriptografis serta Transaction Hash (TxHash) resmi.
-    * **Verifikasi Publik Etherscan:** Tombol khusus *"Lihat di Sepolia Etherscan"* membuka penjelajah blok publik (`sepolia.etherscan.io`) untuk membuktikan transaksi benar-benar tercatat secara desentralisasi dan permanen.
+  * 🤖 **Fasilitas AI Multimodal & Fitur LLM Sesuai Tema:**
+    * 📷 **Bandung AI Lens (Computer Vision):** Memindai objek cagar budaya dan landmark Bandung (Gedung Sate, Kawah Putih, Braga, Bosscha) menggunakan Google Gemini Vision + smart offline fallback.
+    * 💬 **Bandung AI Travel Assistant (LLM Chatbot "Kang Bandung"):** Asisten percakapan cerdas berbahasa ramah yang memahami konteks pariwisata Bandung.
+      * *Respon Adaptif Kontekstual:* Menjawab ringkas dan *to-the-point* untuk pertanyaan cepat seputar lokasi/kuliner, atau menyajikan rekomendasi mendalam ketika diminta menyusun rencana liburan.
+      * *Domain Guardrails:* Dilengkapi sistem pengaman topik agar AI tetap fokus pada pariwisata Bandung.
+  * ⛓️ **Fitur Blockchain Sederhana Terdesentralisasi (Ethereum Sepolia):**
+    * Setiap ulasan yang dikirim pengguna dienkripsi dengan *SHA-256 Hash Chaining* berantai (Genesis Block #0 hingga Blok N).
+    * **Anchor ke Ethereum Sepolia Testnet:** Data hash ulasan ditambatkan langsung ke jaringan blockchain publik Ethereum Sepolia.
+    * **Verifikasi Publik Etherscan:** Tombol *"Lihat di Sepolia Etherscan"* dan fitur salin TxHash memungkinkan dosen penguji memverifikasi transaksi ulasan secara independen di penjelajah blok resmi (`sepolia.etherscan.io`).
 * **Rekomendasi Visual:**
-  * Cuplikan layar viewfinder Bandung AI Lens dan percakapan AI Chatbot di sebelah kiri.
-  * Cuplikan kartu ulasan berlabel Blockchain, tombol Salin Hash, dan bukti konfirmasi transaksi di Sepolia Etherscan di sebelah kanan.
+  * Screenshot jendela obrolan AI Chatbot Kang Bandung dan viewfinder AI Lens di sisi kiri.
+  * Screenshot kartu ulasan blockchain lengkap dengan hash, tombol salin, dan bukti transaksi di web Sepolia Etherscan di sisi kanan.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Kepercayaan wisatawan terhadap ulasan adalah prioritas utama. BandungHub menghadirkan inovasi terdepan: setiap ulasan wisatawan tidak hanya disimpan di cloud Supabase, namun juga di-anchor langsung ke jaringan Blockchain publik Ethereum Sepolia. Dosen penguji dapat menyalin hash ulasan dan mengeceknya langsung di web Sepolia Etherscan sebagai bukti bahwa ulasan tersebut kekal dan bebas pemalsuan. Tak hanya itu, kami melengkapinya dengan Bandung AI Lens untuk memindai landmark visual serta AI Chatbot adaptif untuk konsultasi wisata instan."
+  > "Pada aspek AI dan LLM, BandungHub menghadirkan dua fitur unggulan: AI Lens berbasis Computer Vision untuk mengenali landmark visual, dan AI Chatbot Kang Bandung berbasis LLM Gemini yang adaptif menyesuaikan panjang respon dengan konteks pertanyaan. Untuk fitur blockchain, setiap ulasan dienkripsi SHA-256 dan di-anchor ke jaringan publik Ethereum Sepolia Testnet, di mana dosen penguji dapat memverifikasi keabsahan ulasan secara langsung melalui penjelajah publik Etherscan."
 
 ---
 
-### Slide 9: Ketahanan Data (Offline-First) & Keamanan Akun Berlapis
-* **Judul Slide:** Ketahanan Data (Offline-First) & Keamanan Akun Berlapis
+### Slide 9: Sistem Keamanan Sesi Bank, Login Biometrik & Menu Profil Lengkap (Avatar, Saran & Kesan Kuliah PAM, Logout)
+* **Judul Slide:** Keamanan Sesi Ala Bank, Biometrik & Menu Profil Lengkap
 * **Poin Utama di Slide:**
-  * **Arsitektur Dual-Storage (Offline Resilient):**
-    * *Mode Online:* Sinkronisasi real-time via Supabase Cloud REST API & PostgreSQL.
-    * *Mode Offline:* Pengalihan otomatis ke basis data lokal SQLite tanpa lag, layar putih, atau force close saat internet terputus.
-    * *Antrean Sinkronisasi (Sync Queue):* Aksi saat offline (favorit, draft ulasan, rencana liburan) otomatis tersinkron begitu koneksi internet pulih.
-  * **Keamanan Akun Berlapis Standar Perbankan (Bank-Style App Lock):**
-    * Autentikasi aman melalui Supabase Auth (email & password terenkripsi).
-    * Gerbang penguncian aplikasi dengan **PIN 6-digit keypad** & **Sensor Biometrik** (Fingerprint / Face Unlock).
-    * *Background Inactivity Lock:* Sesi aplikasi otomatis terkunci ketika berpindah ke latar belakang selama lebih dari 2 menit.
-  * **Pengelolaan Keamanan Terpadu & Proteksi Sesi di Profil:**
-    * Fitur disatukan dalam satu menu **"Kelola PIN Keamanan"** yang bersih.
-    * **Wajib Verifikasi PIN Lama:** Mengubah PIN, menghapus PIN, maupun menonaktifkan sensor biometrik mewajibkan verifikasi PIN lama terlebih dahulu untuk mencegah pembajakan akun.
-    * Penataan identitas yang rapi: Badge *Terverifikasi* khusus disematkan pada akun dengan hak akses Administrator.
+  * **Login Biometrik & Keamanan Sesi Ala Bank (Bank-Style App Lock):**
+    * Autentikasi biometrik instan via sensor sidik jari (*fingerprint*) atau pengenalan wajah (*face unlock*).
+    * Keypad numerik 6-digit PIN yang responsif dan aman.
+    * Kunci otomatis (*Background Inactivity Lock*) saat aplikasi ditinggalkan lebih dari 2 menit.
+  * **Menu Profil Lengkap di Bottom Navigation:**
+    * 🖼️ **Foto Profil (Avatar):** Mengunggah foto profil dari Kamera atau Galeri perangkat dan tersimpan di database SQLite (Base64).
+    * 🎓 **Menu Khusus: "Saran & Kesan Mata Kuliah PAM" (Pemrograman Aplikasi Mobile):**
+      * Lembar refleksi terstruktur untuk Tim Pengembang (Mahasiswa 1 & Mahasiswa 2).
+      * Memuat kesan perkuliahan, topik favorit, saran pengembangan kurikulum, dan rating pengalaman belajar.
+    * 🛡️ **Kelola PIN & Biometrik Terpadu:** Penggantian PIN, penghapusan PIN, atau penonaktifan biometrik wajib verifikasi PIN lama terlebih dahulu.
+    * 🚪 **Menu Logout Akun:** Menghapus sesi aktif secara aman dan mengembalikan pengguna ke halaman gerbang autentikasi.
 * **Rekomendasi Visual:**
-  * Tangkapan layar antarmuka BankAppLockScreen (keypad PIN & prompt biometrik) serta dialog Kelola PIN di halaman Profil.
+  * Screenshot layar kunci biometrik / PIN, layar Profil dengan foto avatar, form Saran & Kesan Mata Kuliah PAM, dan tombol Logout.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Dari segi keandalan, aplikasi ini menerapkan konsep Offline-First sejati. Saat pengguna berada di kawasan blank spot pegunungan Bandung, seluruh data 38 destinasi tetap dapat diakses melalui SQLite lokal. Dari aspek keamanan, kami menerapkan standar perbankan dengan PIN 6-digit dan biometrik sidik jari. Di menu Profil, setiap tindakan sensitif seperti mengganti PIN atau mematikan biometrik diwajibkan melewati verifikasi PIN lama terlebih dahulu demi melindungi privasi pengguna."
+  > "Dari segi antarmuka navigasi bawah dan profil, kami memenuhi seluruh kriteria rubrik: Menu Profil dilengkapi foto avatar pengguna dari kamera/galeri, menu khusus 'Saran & Kesan Mata Kuliah PAM' yang memuat refleksi tim pengembang, serta tombol Logout. Sistem keamanan dilengkapi gerbang biometrik sidik jari dan PIN 6-digit ala aplikasi perbankan modern, di mana setiap perubahan keamanan wajib memverifikasi PIN lama terlebih dahulu."
 
 ---
 
-### Slide 10: Pengujian Sistem & Jaminan Kualitas Kode
-* **Judul Slide:** Pengujian Sistem & Jaminan Kualitas Kode
+### Slide 10: Notifikasi Mobile Cerdas, Gamifikasi Wisata (Bocchi Jumpy) & Pengujian Sistem (28/28 Tests Passed)
+* **Judul Slide:** Notifikasi Mobile, Gamifikasi Edukatif & Jaminan Kualitas
 * **Poin Utama di Slide:**
-  * 🧪 **Unit & Widget Testing Komprehensif:**
-    * **28 Pengujian Otomatis (Automated Tests)**: Lulus 100% sempurna (`00:06 +28: All tests passed!`).
-    * **Cakupan Pengujian Kritis:**
-      * ✅ *Web3 & Blockchain:* Genesis block hashing, chaining integritas ulasan, dan audit data.
-      * ✅ *AI Guardrails & Adaptation:* Pembatasan topik pariwisata Bandung dan fleksibilitas respon asisten.
-      * ✅ *Bank Auth & Security:* Sesi kunci aplikasi, keypad PIN numerik, dan proteksi biometrik.
-      * ✅ *Geospatial & Sensor:* Routing kendaraan (motor & mobil), sensor smoothing kompas 3D anti-flip, dan pemetaan arah mata angin.
-      * ✅ *Personalization Engine & Widgets:* Penilaian rekomendasi preferensi dan rendering antarmuka utama.
-  * 🛡️ **Bebas Error & Clean Code:** Terverifikasi lulus analisis linting Dart/Flutter (`flutter analyze`).
-  * ⚡ **Performa Ringan:** Startup time di bawah 1,5 detik dengan pemakaian memori yang sangat hemat.
+  * 🔔 **Fitur Notifikasi Berbasis Mobile Sesuai Konsep:**
+    * Menggunakan `flutter_local_notifications` dengan saluran notifikasi prioritas tinggi (*Android Exact Alarm*).
+    * *Pengingat Agenda Liburan:* Memberikan alarm notifikasi sebelum jadwal kunjungan destinasi dimulai.
+    * *Pengingat Eksplorasi Wisata:* Notifikasi pengingat lokasi wisata terdekat dan sambutan selamat datang saat aplikasi dibuka.
+  * 🎮 **Mini Game Edukatif Terkait Tema (Bocchi Jumpy & Kuis Sunda):**
+    * Game arkade vertikal *Bocchi Jumpy* di mana karakter melompat mengumpulkan kuliner khas Bandung (Batagor, Peuyeum, Colenak) dan suvenir Angklung.
+    * Memanfaatkan sensor kemiringan perangkat (*Accelerometer tilt steering*) atau kontrol sentuh responsif.
+    * Dilengkapi fitur Trivia Kuis Budaya Sunda untuk mengasah wawasan wisatawan.
+  * 🧪 **Pengujian Sistem Otomatis (100% Lulus):**
+    * **28 Pengujian Otomatis (Automated Tests)** lulus sempurna (`00:04 +28: All tests passed!`).
+    * Mencakup: Web3 & Blockchain Anchor, Sensor Smoothing 3D Kompas, AI Guardrails & Adaptation, Bank App Lock & Biometrik, Routing LBS Mobil/Motor, dan SQLite Offline Storage.
+    * Analisis kode bersih tanpa error (`flutter analyze: No issues found!`).
 * **Rekomendasi Visual:**
-  * Cuplikan layar terminal eksekusi `flutter test` yang menampilkan tulisan hijau: `00:06 +28: All tests passed!`.
+  * Screenshot banner notifikasi mobile di status bar, tampilan mini game Bocchi Jumpy, dan terminal eksekusi `flutter test` bertuliskan `All tests passed!`.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Untuk memastikan stabilitas dan keandalan sistem, kami menerapkan serangkaian pengujian otomatis menyeluruh. Sebanyak 28 skenario pengujian unit dan widget test berhasil lulus 100%. Pengujian ini mencakup keabsahan rantai hash ulasan blockchain, kepatuhan guardrail AI, keamanan gerbang PIN biometrik, logika navigasi jalan nyata, hingga penghalusan sensor kompas digital."
+  > "Untuk fitur notifikasi mobile, BandungHub dilengkapi alarm notifikasi pengingat jadwal liburan dan destinasi terdekat. Kami juga menyematkan mini game edukatif Bocchi Jumpy yang memanfaatkan sensor gerak kemiringan accelerometer untuk mengumpulkan kuliner khas Bandung. Seluruh fungsionalitas ini telah diuji secara komprehensif melalui 28 automated tests yang lulus 100 persen dan kode yang terverifikasi bersih bebas lint issue."
 
 ---
 
-### Slide 11: Demo Alur Pengguna (User Journey)
-* **Judul Slide:** Alur Demonstrasi Pengguna (User Journey)
+### Slide 11: Demo Alur Pengguna Terpadu (User Journey)
+* **Judul Slide:** Skenario Demonstrasi Alur Pengguna (Live Demo Flow)
 * **Poin Utama di Slide:**
-  * **Langkah 1 (Masuk & Konsultasi AI):** Masuk dengan aman -> Eksplorasi 38 destinasi atau minta rekomendasi wisata ke AI Chatbot Kang Bandung.
-  * **Langkah 2 (Pindai AI Lens):** Arahkan kamera ke landmark ikonik (misal foto Gedung Sate) -> AI Lens menyajikan sejarah & tips kunjungan.
-  * **Langkah 3 (Susun Rencana & Cek Biaya):** Buat itinerary harian -> Cek konversi mata uang (misal Ringgit atau Dollar) & sesuaikan zona waktu -> Ekspor ke PDF / Teks WhatsApp.
-  * **Langkah 4 (Navigasi Rute & Kompas):** Buka rute jalan riil (pilih mode Sepeda Motor non-tol atau Mobil) -> Pandu orientasi arah dengan kompas digital presisi.
-  * **Langkah 5 (Ulasan Blockchain & Uji Keamanan):** Kirim ulasan ulasan wisata -> Tunjukkan hash kriptografis & tautan Etherscan Sepolia -> Masuk ke Profil untuk mendemokan proteksi Kelola PIN & Biometrik.
+  * **Tahap 1 (Akses Cepat & Konsultasi AI):** Masuk dengan sidik jari/PIN -> Beranda -> Tanya tips liburan ke AI Chatbot Kang Bandung (tunjukkan respon cepat & adaptif).
+  * **Tahap 2 (Pindai Landmark AI Lens):** Buka AI Lens -> Arahkan kamera ke landmark (Gedung Sate) -> AI memaparkan sejarah dan rekomendasi aktivitas.
+  * **Tahap 3 (Susun Rencana & Konversi Global):** Buat itinerary baru -> Buka rincian anggaran -> Ubah mata uang ke USD/MYR -> Ubah zona waktu ke London (GMT) -> Ekspor ke dokumen PDF.
+  * **Tahap 4 (Navigasi LBS & Kompas Halus):** Pilih destinasi -> Tampilkan rute jalan riil sepeda motor (non-tol) -> Perlihatkan jarum kompas digital 360° yang berputar mulus.
+  * **Tahap 5 (Ulasan Blockchain & Etherscan):** Tulis ulasan wisata -> Perlihatkan hash blok yang tercetak -> Buka tombol *"Lihat di Sepolia Etherscan"* untuk pembuktian on-chain.
+  * **Tahap 6 (Menu Profil & Evaluasi Kuliah PAM):** Buka tab Profil -> Tunjukkan foto avatar -> Buka menu *Saran & Kesan Mata Kuliah PAM* -> Uji ganti PIN / matikan biometrik (wajib verifikasi PIN lama) -> Uji tombol Logout.
 * **Rekomendasi Visual:**
-  * Diagram alir 5 langkah pengalaman pengguna yang dilengkapi miniatur tangkapan layar aplikasi di masing-masing tahap.
+  * Diagram alir 6 langkah demonstrasi langsung dilengkapi mockup tangkapan layar di setiap langkahnya.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Dalam sesi demonstrasi langsung nanti, saya akan mempraktikkan alur nyata seorang wisatawan: mulai dari berkonsultasi rencana wisata dengan AI Chatbot, memindai objek bersejarah lewat AI Lens, menyusun rencana perjalanan lengkap dengan konversi mata uang dan ekspor PDF, menavigasikan rute peta dan kompas halus, mengirim ulasan terverifikasi di Sepolia Etherscan, serta memperlihatkan proteksi keamanan PIN di menu Profil."
+  > "Dalam sesi demonstrasi langsung, kami akan mempraktikkan alur terpadu ini: mulai dari login biometrik, konsultasi ke AI Chatbot, memindai objek dengan AI Lens, mengonversi mata uang dan zona waktu di itinerary, menavigasi rute jalan nyata dan kompas, mengirim ulasan terverifikasi di Sepolia Etherscan, serta memperlihatkan pengisian Saran dan Kesan Kuliah PAM di menu Profil."
 
 ---
 
-### Slide 12: Kesimpulan & Sesi Tanya Jawab (Q&A)
-* **Judul Slide:** Kesimpulan & Nilai Tambah Inovasi
+### Slide 12: Matriks Pemenuhan 100% Rubrik Penilaian Projek Akhir PAM
+* **Judul Slide:** Matriks Pemenuhan 100% Rubrik Penilaian PAM
+* **Poin Utama di Slide (Tabel Kesesuaian Kriteria):**
+
+| Syarat Rubrik Penilaian Dosen | Status | Bukti Implementasi di BandungHub |
+| :--- | :---: | :--- |
+| **1. Konsep Projek Akhir Terpadu** | ✅ 100% | *Smart Tourism & Heritage Navigator Kota Bandung* (Katalog 38 destinasi, LBS, Itinerary, AI, Blockchain). |
+| **2. Login Enkripsi (Non-Firebase) & Session** | ✅ 100% | Supabase Cloud Database + SQLite Local Cache, Password Hashing, Session Timeout & Auto-lock 2 menit. |
+| **3. Login Biometric** | ✅ 100% | Sensor Sidik Jari (*Fingerprint*) & Pengenalan Wajah (*Face Unlock*) via library `local_auth`. |
+| **4. Database Lokal & Online** | ✅ 100% | Dual-Storage: **SQLite (`sqflite`)** lokal tangguh (*offline-first*) & **Supabase Cloud (PostgreSQL)** online. |
+| **5. Web Service / API, LBS, Multiplatform** | ✅ 100% | API: OSRM Routing, Gemini AI, Open Exchange, Sepolia RPC. LBS: GPS geolocator & rute peta. Multiplatform: Flutter (Android & iOS). |
+| **6. Bottom Nav: Profil (Ada Foto), Saran & Kesan PAM, Logout** | ✅ 100% | Tab Profil di Bottom Nav; Foto Avatar dari Kamera/Galeri (Base64 SQLite); Menu Khusus *Saran & Kesan Mata Kuliah PAM*; Tombol Logout Akun. |
+| **7. Konversi Mata Uang (≥3) & Waktu (WIB, WIT, WITA, London)** | ✅ 100% | 10 Mata Uang (IDR, USD, EUR, SGD, MYR, GBP, dll.); Zona Waktu: **WIB, WITA, WIT, London (GMT)**, EST, JST terpadu di Itinerary. |
+| **8. Minimal 2 Sensor Sesuai Konsep** | ✅ 100% | **3 Sensor Aktif:** Magnetometer (Kompas 360°), Accelerometer (Kemiringan 3D & Tilt Game), Gyroscope (Kecepatan Sudut). |
+| **9. Fitur / Fasilitas AI & Fitur LLM** | ✅ 100% | **AI Vision:** Bandung AI Lens (Gemini Multimodal). **LLM:** Bandung AI Chatbot Kang Bandung (Gemini LLM adaptif kontekstual). |
+| **10. Mini Games Sederhana Sesuai Konsep** | ✅ 100% | Game arkade *Bocchi Jumpy* (mengumpulkan kuliner khas Bandung via sensor tilt/touch) & Kuis Budaya Sunda. |
+| **11. Fasilitas Pencarian & Pemilihan** | ✅ 100% | Live Search Bar, Filter 5 Kategori Tematik, Slider Batas Budget Tiket Masuk, dan Penanda Destinasi Favorit. |
+| **12. Fitur Notifikasi Berbasis Mobile** | ✅ 100% | `flutter_local_notifications`: Alarm jadwal itinerary liburan, pengingat lokasi destinasi, dan sambutan selamat datang. |
+| **13. Fitur Blockchain Sederhana** | ✅ 100% | Review Blockchain Ledger SHA-256 + Anchoring ke **Ethereum Sepolia Testnet** (bisa dicek live di Sepolia Etherscan). |
+
+* **Speaker Notes (Naskah Pembicara):**
+  > "Bapak dan Ibu dosen penguji dapat mencermati tabel matriks pada slide ini. Seluruh 13 butir spesifikasi dan kriteria penilaian mata kuliah Pemrograman Aplikasi Mobile telah kami penuhi secara lengkap 100% tanpa ada poin yang terlewat, bahkan kami perkaya dengan inovasi Web3 Blockchain Sepolia dan pengujian otomatis 28 skenario."
+
+---
+
+### Slide 13: Kesimpulan & Sesi Tanya Jawab (Q&A)
+* **Judul Slide:** Kesimpulan & Sesi Tanya Jawab (Q&A)
 * **Poin Utama di Slide:**
-  * 🌟 **Solusi Pariwisata Komprehensif:** Menyatukan katalog terkurasi, kecerdasan buatan multimodal (Lens & Chat), navigasi jalan nyata, dan perencana anggaran global dalam satu aplikasi terpadu.
-  * 🌟 **Pionir Transparansi Web3:** Integrasi blockchain publik Ethereum Sepolia memberikan jaminan bahwa ulasan wisatawan otentik, transparan, dan tidak dapat dimanipulasi.
-  * 🌟 **Keandalan & Standar Keamanan Tinggi:** Arsitektur Offline-First yang siap menghadapi blank spot pegunungan serta keamanan berlapis standar aplikasi perbankan.
-  * 🌟 **Kesiapan Rilis Teruji:** Lulus 28/28 automated tests dengan performa responsif dan antarmuka modern Material 3.
+  * 🌟 **Solusi Nyata & Komprehensif:** Menyelesaikan kendala nyata wisatawan di Kota Bandung melalui pendekatan teknologi terintegrasi.
+  * 🌟 **Kesiapan Teknis Teruji:** Arsitektur modular bersih (*clean architecture*), lulus 28 automated tests (100%), dan siap berjalan dalam kondisi offline maupun online.
+  * 🌟 **Inovasi Masa Depan:** Membuktikan potensi sinergi antara aplikasi mobile cerdas, AI generatif, dan teknologi desentralisasi blockchain.
   * **Terima Kasih / Sesi Tanya Jawab (Q&A)**
-  * Kontak: [Email Anda] | Repositori GitHub: [Link Repo GitHub Anda]
+  * Kontak: [Email Anda] | GitHub: [Link Repo GitHub Anda]
 * **Rekomendasi Visual:**
-  * Mockup 3 smartphone berdampingan menampilkan Beranda, Peta Navigasi, dan Kartu Ulasan Blockchain Sepolia. Teks penutup: *"Terima Kasih - Sesi Tanya Jawab (Q&A)"*.
+  * Mockup 3 smartphone berdampingan menampilkan Beranda, Peta Navigasi Rute, dan Kartu Ulasan Blockchain Sepolia. Teks besar: *"Terima Kasih - Sesi Tanya Jawab (Q&A)"*.
 * **Speaker Notes (Naskah Pembicara):**
-  > "Sebagai penutup, BandungHub membuktikan bagaimana perpaduan teknologi mobile modern, kecerdasan buatan, dan blockchain dapat mentransformasi pengalaman berwisata menjadi lebih praktis, aman, dan terpercaya. Demikian pemaparan presentasi dari saya, terima kasih banyak atas perhatian Bapak/Ibu dosen penguji serta rekan-rekan sekalian. Waktu dan kesempatan saya persilakan untuk sesi tanya jawab."
+  > "Sebagai kesimpulan, BandungHub membuktikan bahwa aplikasi mobile pariwisata dapat dibangun secara tangguh, modern, dan memenuhi seluruh standar kompetensi mata kuliah Pemrograman Aplikasi Mobile. Sekian presentasi dari kami, terima kasih banyak atas waktu dan perhatian Bapak/Ibu dosen penguji. Waktu dan tempat kami persilakan untuk sesi tanya jawab."
 
 ---
 
-## 💡 TIPS STRATEGIS DEMO PRESENTASI UNTUK MAHASISWA:
-1. **Waktu Pemaparan Ideal:**
-   * 7–8 menit presentasi slide (fokus pada solusi masalah, arsitektur, dan inovasi Sepolia Blockchain + AI).
-   * 5–7 menit demonstrasi langsung (*live demo*) pada emulator Android atau smartphone fisik.
-2. **Poin Emas Pembuktian di Hadapan Dosen Penguji:**
-   * **Demo Mode Pesawat (Airplane Mode):** Nyalakan mode pesawat di HP/emulator, buka aplikasi -> buktikan aplikasi tetap lancar membuka katalog 38 destinasi dan itinerary (bukti Offline-First SQLite berjalan nyata).
-   * **Demo Blockchain Sepolia:** Tulis sebuah ulasan di salah satu destinasi, buka detail ulasan, perlihatkan kode Hash / TxHash ulasan yang tercetak, lalu klik tombol *"Lihat di Sepolia Etherscan"*. Tunjukkan kepada dosen bahwa transaksi ulasan benar-benar terdaftar di blockchain publik Ethereum Sepolia.
-   * **Demo Responsif AI Chatbot:** Tanyakan pertanyaan sederhana (misal: *"Batagor enak di mana?"*) untuk menunjukkan jawaban ringkas to-the-point, lalu tanyakan *"Rencanakan liburan 1 hari di Lembang"* untuk memperlihatkan respon terstruktur dan komprehensif.
-   * **Demo Keamanan Profil:** Masuk ke Profil -> Buka *Kelola PIN Keamanan* -> Tunjukkan bahwa sistem meminta verifikasi PIN lama sebelum mengizinkan penggantian atau penonaktifan biometrik.
+## 💡 PANDUAN PRAKTIS LIVE DEMO & JAWABAN PERTANYAAN DOSEN PENGUJI:
+
+1. **Urutan Live Demo Terbaik di HP/Emulator (Durasi 5-7 Menit):**
+   - **Langkah 1:** Buka aplikasi -> Tunjukkan layar kunci **BankAppLockScreen** -> Tempelkan sidik jari (biometrik) atau ketik PIN 6 digit untuk membuka.
+   - **Langkah 2:** Pada Beranda, gunakan *Search Bar* untuk mencari destinasi (misal *"Kawah Putih"*), ubah filter kategori (*Alam*), dan gerakkan slider budget untuk mendemokan **Fasilitas Pencarian dan Pemilihan**.
+   - **Langkah 3:** Buka **AI Chatbot Kang Bandung**, ajukan pertanyaan singkat: *"Rekomendasi batagor enak di Bandung"* -> Perlihatkan AI menjawab ringkas, relevan, dan to the point.
+   - **Langkah 4:** Buka **Rencana Perjalanan (Itinerary)** -> Tunjukkan konversi mata uang (misal ke Ringgit/USD) dan zona waktu (pilih **London / GMT** atau **WITA**) -> Klik tombol ekspor PDF untuk membuktikan dokumen terbuat dengan rapi.
+   - **Langkah 5:** Buka **Peta Navigasi** -> Pilih moda *Sepeda Motor* (tunjukkan rute non-tol) -> Putar HP untuk mendemokan perputaran jarum **Kompas Sensor 360°** yang halus.
+   - **Langkah 6:** Tulis sebuah ulasan di salah satu destinasi -> Tunjukkan hash SHA-256 yang tercetak -> Klik tombol *"Lihat di Sepolia Etherscan"* untuk membuktikan **Fitur Blockchain Sederhana** terhubung ke Ethereum Sepolia.
+   - **Langkah 7:** Masuk ke tab **Profil** -> Tunjukkan foto profil avatar -> Buka menu **Saran & Kesan Mata Kuliah PAM** -> Buka pengaturan PIN/Biometrik (buktikan wajib verifikasi PIN lama) -> Klik tombol **Logout**.
+
+2. **Antisipasi Pertanyaan Dosen:**
+   - *Tanya:* "Kenapa tidak pakai Firebase?"
+     *Jawab:* "Sesuai ketentuan tugas akhir yang meminta autentikasi non-Firebase, kami menggunakan Supabase Cloud (PostgreSQL) yang lebih fleksibel, didukung penyimpanan lokal SQLite untuk kapabilitas Offline-First sejati."
+   - *Tanya:* "Sensor apa saja yang dipakai?"
+     *Jawab:* "Kami mengimplementasikan 3 sensor: Magnetometer untuk kompas arah mata angin 360 derajat, Accelerometer untuk deteksi kemiringan 3D dan kontrol tilt pada mini game Bocchi Jumpy, serta Gyroscope."
+   - *Tanya:* "Apakah blockchain-nya beneran atau simulasi?"
+     *Jawab:* "Buku besar ulasannya nyata menggunakan enkripsi SHA-256 Merkle Chaining lokal dan ditambatkan (*anchor*) ke jaringan publik Ethereum Sepolia Testnet melalui transaksi RPC resmi yang dapat diverifikasi siapa saja di Sepolia Etherscan."

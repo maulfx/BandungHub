@@ -1246,7 +1246,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Icons.school_rounded,
                           color: AppColors.secondary,
                         ),
-                        title: const Text('Kesan & Pesan Kuliah'),
+                        title: const Text(
+                          'Saran & Kesan Mata Kuliah PAM',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Pemrograman Aplikasi Mobile',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
                           Navigator.push(
