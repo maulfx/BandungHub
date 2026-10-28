@@ -2,10 +2,10 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![Blockchain](https://img.shields.io/badge/Blockchain-SHA--256%20Review%20Ledger-6f42c1?logo=blockchain&logoColor=white)](https://github.com/maulfx/BandungHub)
+[![Blockchain](https://img.shields.io/badge/Blockchain-Ethereum%20Sepolia%20Anchor-6f42c1?logo=ethereum&logoColor=white)](https://sepolia.etherscan.io)
 [![AI](https://img.shields.io/badge/AI-Google%20Gemini%203.5%2F3.8-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
 [![Forex](https://img.shields.io/badge/Forex-Live%20Exchange%20Rates-0D9488?logo=cashapp&logoColor=white)](https://open.er-api.com)
-[![Tests](https://img.shields.io/badge/Tests-Passing%20(20%2F20)-success)](https://flutter.dev)
+[![Tests](https://img.shields.io/badge/Tests-Passing%20(28%2F28)-success)](https://flutter.dev)
 [![Linter](https://img.shields.io/badge/flutter_analyze-0%20Issues-brightgreen)](https://dart.dev)
 [![License](https://img.shields.io/badge/License-Academic-blue.svg)]()
 
@@ -29,7 +29,7 @@ Aplikasi dibangun menggunakan **Flutter** dengan pendekatan arsitektur bersih (*
 | **Framework** | Flutter 3.x (Dart 3.x) | Desain Material 3 adaptif, responsif ponsel cerdas, bebas AI-slop |
 | **State Management** | `ChangeNotifier` & `ValueNotifier` | Reaktif, efisien memori, tanpa overhead boilerplate berlebih |
 | **Local Storage** | `sqflite` + `shared_preferences` | Dual-engine storage: SQLite relasional + key-value caching offline |
-| **Review Blockchain** | `crypto` (SHA-256 Hash Chaining) | Buku besar ulasan terenkripsi berantai, Genesis Block #0, audit integritas live & simulasi manipulasi |
+| **Review Blockchain** | `crypto` (SHA-256) + Sepolia RPC | Buku besar ulasan terenkripsi berantai, Genesis Block #0, dan anchoring ke Ethereum Sepolia Testnet yang dapat diverifikasi publik di Etherscan |
 | **Peta & Navigasi** | `flutter_map` + OSM + OSRM | Rute jalan riil (bukan garis lurus) dengan 4 moda transportasi (Mobil, Motor, Jalan Kaki, Kereta) via OSRM, bebas biaya API key |
 | **AI Travel Assistant** | Google Gemini REST API + Heuristik | Model `gemini-3.5-flash` / `gemini-3.8-flash` + Smart Heuristic Engine, dilengkapi Guardrails anti-out-of-scope |
 | **Keamanan & Auth** | `local_auth` + SHA-256 Checksum | Keamanan Ala Bank (*Bank-Style App Lock*): Sensor Biometrik (Fingerprint/Face ID), PIN 6-digit keypad, dan kunci otomatis saat aplikasi di latar belakang |

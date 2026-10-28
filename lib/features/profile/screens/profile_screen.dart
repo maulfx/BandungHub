@@ -9,7 +9,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../data/repositories/itinerary_repository.dart';
-import '../../../data/repositories/review_repository.dart';
 import '../../../data/repositories/theme_repository.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
@@ -1142,14 +1141,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           } else if (action == 'delete') {
                             await _authRepo.removePin();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('PIN keamanan telah dihapus.'),
-                                  backgroundColor: AppColors.secondary,
-                                ),
-                              );
-                            }
+                            if (!mounted || !context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('PIN keamanan telah dihapus.'),
+                                backgroundColor: AppColors.secondary,
+                              ),
+                            );
                           }
                         },
                       ),
