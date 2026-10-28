@@ -777,61 +777,6 @@ class _DestinationReviewsSectionState extends State<DestinationReviewsSection> {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
-
-                  // Demonstration Control Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: isValid
-                              ? () {
-                                  blockchain.simulateTamper(1);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Simulasi manipulasi diterapkan pada Blok #1! Perhatikan deteksi audit.'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                }
-                              : null,
-                          icon: const Icon(Icons.bug_report_outlined, size: 14),
-                          label: const Text('Simulasi Serangan', style: TextStyle(fontSize: 11)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.orange.shade800,
-                            side: BorderSide(color: Colors.orange.shade300),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: !isValid
-                              ? () async {
-                                  await blockchain.restoreChain();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Rantai blockchain berhasil dipulihkan ke data asli!'),
-                                        backgroundColor: Colors.teal,
-                                      ),
-                                    );
-                                  }
-                                }
-                              : null,
-                          icon: const Icon(Icons.refresh_rounded, size: 14),
-                          label: const Text('Pulihkan Data Asli', style: TextStyle(fontSize: 11)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
                   const SizedBox(height: 14),
                   const Text('Daftar Rantai Blok (Block Ledger):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),

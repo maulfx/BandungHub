@@ -23,6 +23,7 @@ class CompassDialWidget extends StatefulWidget {
 
 class _CompassDialWidgetState extends State<CompassDialWidget> {
   double _continuousHeading = 0.0;
+  double _prevContinuousHeading = 0.0;
   double _lastTargetHeading = 0.0;
   bool _initialized = false;
 
@@ -44,6 +45,7 @@ class _CompassDialWidgetState extends State<CompassDialWidget> {
     if (!_initialized) {
       _lastTargetHeading = newHeading;
       _continuousHeading = newHeading;
+      _prevContinuousHeading = newHeading;
       _initialized = true;
       return;
     }
@@ -51,6 +53,7 @@ class _CompassDialWidgetState extends State<CompassDialWidget> {
     // Hitung jarak sudut terpendek (menghindari lompatan 360° saat melewati Utara)
     double diff = newHeading - _lastTargetHeading;
     diff = ((diff + 180) % 360 + 360) % 360 - 180;
+    _prevContinuousHeading = _continuousHeading;
     _continuousHeading += diff;
     _lastTargetHeading = newHeading;
   }
@@ -63,9 +66,9 @@ class _CompassDialWidgetState extends State<CompassDialWidget> {
       width: widget.size,
       height: widget.size,
       child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: _continuousHeading),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
+        tween: Tween<double>(begin: _prevContinuousHeading, end: _continuousHeading),
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutQuart,
         builder: (context, animatedHeading, child) {
           final dialAngle = -animatedHeading * (math.pi / 180);
 

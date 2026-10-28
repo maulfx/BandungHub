@@ -1012,20 +1012,13 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(end: _orientation.heading),
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, angle, _) {
-                        return Transform.rotate(
-                          angle: angle * (math.pi / 180),
-                          child: const Icon(
-                            Icons.navigation_rounded,
-                            color: Colors.redAccent,
-                            size: 15,
-                          ),
-                        );
-                      },
+                    Transform.rotate(
+                      angle: _orientation.heading * (math.pi / 180),
+                      child: const Icon(
+                        Icons.navigation_rounded,
+                        color: Colors.redAccent,
+                        size: 15,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -1058,32 +1051,25 @@ class _DestinationMapScreenState extends State<DestinationMapScreen> {
                   tooltip:
                       'Kompas (${_orientation.heading.toInt()}° ${_orientation.cardinalDirection})',
                   onPressed: _showCompassInfoDialog,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(end: -_orientation.heading),
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, angle, _) {
-                      return Transform.rotate(
-                        angle: angle * (math.pi / 180),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(Icons.navigation_rounded, size: 20),
-                            Positioned(
-                              top: 2,
-                              child: Container(
-                                width: 3.5,
-                                height: 3.5,
-                                decoration: const BoxDecoration(
-                                  color: Colors.redAccent,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
+                  child: Transform.rotate(
+                    angle: -_orientation.heading * (math.pi / 180),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(Icons.navigation_rounded, size: 20),
+                        Positioned(
+                          top: 2,
+                          child: Container(
+                            width: 3.5,
+                            height: 3.5,
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
                             ),
-                          ],
+                          ),
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),

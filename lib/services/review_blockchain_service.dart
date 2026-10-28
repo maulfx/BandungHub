@@ -261,24 +261,6 @@ class ReviewBlockchainService extends ChangeNotifier {
     };
   }
 
-  /// Fitur Simulasi Manipulasi Data (Khusus Pembuktian Demo & Presentasi)
-  /// Mengubah data blok secara paksa tanpa memperbarui hash untuk membuktikan deteksi kecurangan
-  void simulateTamper(int blockIndex, {String fakeComment = '[MANIPULASI] Ulasan ini telah diubah secara ilegal!', double fakeRating = 5.0}) {
-    if (blockIndex <= 0 || blockIndex >= _chain.length) return;
-
-    final target = _chain[blockIndex];
-    _chain[blockIndex] = target.copyWith(
-      comment: fakeComment,
-      rating: fakeRating,
-    );
-    notifyListeners();
-  }
-
-  /// Mengembalikan rantai ke data asli dari penyimpanan lokal (Reset setelah simulasi)
-  Future<void> restoreChain() async {
-    await _loadFromStorage();
-    notifyListeners();
-  }
 
   Future<void> _loadFromStorage() async {
     try {

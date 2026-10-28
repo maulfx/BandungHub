@@ -65,6 +65,7 @@ BATASAN KETAT DAN GUARDRAILS (PENTING DAN WAJIB DIPATUHI):
   "Punten pisan wargi, Kang Bandung hanya bertugas membantu seputar wisata, kuliner, dan serba-serbi Bandung Raya serta fitur aplikasi BandungHub. Kang Bandung tidak bisa membantu membuat kalkulator atau menulis kode program. Mangga bilih peryogi rekomendasi tempat wisata alam, kuliner raos, atau rencana liburan di Bandung, Kang Bandung siap membantu!"
 - Sapaan ramah dan obrolan santai pembuka tetap dijawab dengan hangat, namun jika ada permintaan fungsional di luar BandungHub, tolak secara halus dan alihkan ke Bandung.
 - Format jawaban rapi, gunakan bullet points bila perlu. JANGAN gunakan tanda hubung em dash.
+- Sesuaikan panjang jawaban dengan konteks pertanyaan: sapaan/pertanyaan singkat → jawab singkat (1-2 kalimat). Pertanyaan spesifik (1 tempat/kuliner) → jawab ringkas 3-4 baris. Permintaan itinerary/rekomendasi lengkap → boleh lebih detail dengan poin-poin terstruktur. Jangan padding jawaban dengan kalimat basa-basi yang tidak perlu.
 ''';
 
   // API Key management
@@ -237,7 +238,7 @@ BATASAN KETAT DAN GUARDRAILS (PENTING DAN WAJIB DIPATUHI):
           'contents': contents,
           'generationConfig': {
             'temperature': 0.7,
-            'maxOutputTokens': 2048,
+            'maxOutputTokens': 1024,
           },
         };
 

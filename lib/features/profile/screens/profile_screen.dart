@@ -614,38 +614,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () async {
-                      Navigator.pop(dialogCtx);
-                      // 1. Bersihkan ulasan lokal
-                      await ReviewRepository().clearLocalReviews();
-                      // 2. Bersihkan rencana perjalanan lokal
-                      await ItineraryRepository().clearLocalItineraries();
-                      // 3. Muat ulang destinasi murni dari Supabase Cloud
-                      await DestinationRepository().refreshFromCloud();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Data lokal telah dibersihkan! Aplikasi kini memuat data murni dari Supabase Cloud.',
-                            ),
-                            backgroundColor: AppColors.success,
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.cloud_sync_rounded, size: 18),
-                    label: const Text('Gunakan Data Supabase Murni'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final freedBytes = await syncRepo.clearTemporaryCache();
@@ -891,13 +859,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Status chip
+                // Status chip — hanya tampil untuk admin
                 Builder(
                   builder: (context) {
                     final isAdmin = _authRepo.isAdmin;
-                    final badgeColor = isAdmin
-                        ? const Color(0xFF673AB7)
-                        : AppColors.success;
+                    if (!isAdmin) return const SizedBox.shrink();
 
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -905,31 +871,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: badgeColor.withValues(alpha: 0.12),
+                        color: const Color(0xFF673AB7).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: badgeColor.withValues(alpha: 0.35),
+                          color: const Color(0xFF673AB7).withValues(alpha: 0.35),
                         ),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (isAdmin) ...[
-                            const Icon(
-                              Icons.shield_rounded,
-                              size: 14,
-                              color: Color(0xFF673AB7),
-                            ),
-                            const SizedBox(width: 6),
-                          ],
+                          Icon(
+                            Icons.shield_rounded,
+                            size: 14,
+                            color: Color(0xFF673AB7),
+                          ),
+                          SizedBox(width: 6),
                           Text(
-                            isAdmin
-                                ? 'Hak Akses: Administrator BandungHub'
-                                : 'Akun Resmi Terverifikasi',
+                            'Hak Akses: Administrator BandungHub',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: badgeColor,
+                              color: Color(0xFF673AB7),
                             ),
                           ),
                         ],
@@ -1078,6 +1040,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         value: isBiometric,
                         onChanged: (val) async {
                           final messenger = ScaffoldMessenger.of(context);
+                          // Jika mau dimatikan dan PIN sudah diatur, wajib verifikasi PIN dulu
+                          if (!val && hasPin) {
+                            if (!context.mounted) return;
+                            final confirmed = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PinLockScreen(
+                                  mode: PinScreenMode.verify,
+                                  onVerified: () => Navigator.pop(context, true),
+                                ),
+                              ),
+                            );
+                            if (confirmed != true) return;
+                          }
                           final success = await _authRepo.toggleBiometric(val);
                           if (!success && mounted) {
                             messenger.showSnackBar(
@@ -1093,55 +1069,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const Divider(height: 1),
 
-                      // Setup or Change PIN
+                      // Kelola PIN — gabungan ganti & hapus
                       ListTile(
-                        leading: const Icon(
+                        leading: Icon(
                           Icons.pin_rounded,
-                          color: AppColors.secondary,
+                          color: hasPin ? AppColors.secondary : AppColors.textSecondaryLight,
                         ),
-                        title: Text(
-                          hasPin ? 'Change PIN' : 'PIN Belum Diatur',
+                        title: Text(hasPin ? 'Kelola PIN Keamanan' : 'Buat PIN Keamanan'),
+                        subtitle: Text(
+                          hasPin ? 'Ganti atau hapus PIN' : 'PIN belum diatur',
+                          style: const TextStyle(fontSize: 11),
                         ),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          if (!hasPin) {
+                            // Belum ada PIN → langsung buat
+                            if (!context.mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PinLockScreen(mode: PinScreenMode.create),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Sudah ada PIN → tampilkan pilihan
+                          if (!context.mounted) return;
+                          final action = await showDialog<String>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Kelola PIN Keamanan'),
+                              content: const Text('Pilih tindakan yang ingin dilakukan.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, 'change'),
+                                  child: const Text('Ganti PIN'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, 'delete'),
+                                  style: TextButton.styleFrom(foregroundColor: AppColors.warning),
+                                  child: const Text('Hapus PIN'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Batal'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (action == null || !context.mounted) return;
+
+                          // Verifikasi PIN lama dulu untuk kedua aksi
+                          final verified = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PinLockScreen(
-                                mode: PinScreenMode.create,
+                              builder: (_) => PinLockScreen(
+                                mode: PinScreenMode.verify,
+                                onVerified: () => Navigator.pop(context, true),
                               ),
                             ),
                           );
-                        },
-                      ),
+                          if (verified != true || !context.mounted) return;
 
-                      // Remove PIN if exists
-                      if (hasPin) ...[
-                        const Divider(height: 1),
-                        ListTile(
-                          leading: const Icon(
-                            Icons.lock_open_rounded,
-                            color: AppColors.warning,
-                          ),
-                          title: const Text('Hapus PIN Keamanan'),
-                          trailing: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: AppColors.warning,
-                          ),
-                          onTap: () async {
-                            final messenger = ScaffoldMessenger.of(context);
+                          if (action == 'change') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PinLockScreen(mode: PinScreenMode.create),
+                              ),
+                            );
+                          } else if (action == 'delete') {
                             await _authRepo.removePin();
                             if (mounted) {
-                              messenger.showSnackBar(
+                              ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('PIN keamanan telah dihapus.'),
                                   backgroundColor: AppColors.secondary,
                                 ),
                               );
                             }
-                          },
-                        ),
-                      ],
+                          }
+                        },
+                      ),
                     ],
                   ),
                 ),

@@ -86,14 +86,17 @@ class SensorService {
           if (_lastGyroTime != null) {
             final dt = now.difference(_lastGyroTime!).inMicroseconds / 1e6;
             if (dt > 0 && dt < 0.5) {
-              // In portrait mode: turning clockwise (right) gives negative Z gyro rate
-              // Rate in degrees/sec = -event.z * 180 / math.pi
+              // Portrait mode: rotating phone clockwise (right) → gyro Z is negative.
+              // Heading convention: CW = increasing (0=U, 90=T, 180=S, 270=B).
+              // So dYaw = +event.z * ... would be wrong; correct sign: CW rotation → positive delta.
+              // sensors_plus on Android: Z-axis points up, CW spin → negative z rate.
+              // Therefore: dYaw = event.z * rad_to_deg * dt gives CW = negative → wrong.
+              // We want CW → positive, so negate: dYaw = -event.z * rad_to_deg * dt. ✓
+              // BUT: Flutter sensors_plus reports z in rad/s where positive = CCW.
+              // So for heading: turning RIGHT (CW) → z negative → -z positive → heading increases. ✓
               final dYaw = -event.z * (180 / math.pi) * dt;
-              _gyroHeading = (_gyroHeading + dYaw) % 360;
-              if (_gyroHeading < 0) _gyroHeading += 360;
-
-              _fusionHeading = (_fusionHeading + dYaw) % 360;
-              if (_fusionHeading < 0) _fusionHeading += 360;
+              _gyroHeading = (_gyroHeading + dYaw + 360) % 360;
+              _fusionHeading = (_fusionHeading + dYaw + 360) % 360;
             }
           }
           _lastGyroTime = now;
@@ -169,10 +172,10 @@ class SensorService {
             _filteredMagZ = event.z;
             _hasMagnetometerData = true;
           } else {
-            // Low-pass EMA filter (alpha = 0.35) to remove electromagnetic fluctuations
-            _filteredMagX = _filteredMagX * 0.65 + event.x * 0.35;
-            _filteredMagY = _filteredMagY * 0.65 + event.y * 0.35;
-            _filteredMagZ = _filteredMagZ * 0.65 + event.z * 0.35;
+            // Low-pass EMA filter (alpha = 0.20) — tighter to reduce magnetic jitter/jumpiness
+            _filteredMagX = _filteredMagX * 0.80 + event.x * 0.20;
+            _filteredMagY = _filteredMagY * 0.80 + event.y * 0.20;
+            _filteredMagZ = _filteredMagZ * 0.80 + event.z * 0.20;
           }
 
           _computeOrientation();
@@ -250,13 +253,13 @@ class SensorService {
             _fusionHeading = magHeading;
             _hasInitialHeading = true;
           } else {
-            // Complementary filter: blend gyro responsiveness with absolute magnetic heading
+            // Complementary filter: gyro handles fast rotation, magnetometer corrects drift.
+            // Alpha 0.45 → more responsive correction, reduces lag and patchiness.
             final diff = magHeading - _fusionHeading;
             final shortestDiff = ((diff + 180) % 360 + 360) % 360 - 180;
-            // Ignore micro-noise jitter (< 0.2°) when phone is stationary
-            if (shortestDiff.abs() > 0.2) {
-              _fusionHeading = (_fusionHeading + shortestDiff * 0.30) % 360;
-              if (_fusionHeading < 0) _fusionHeading += 360;
+            // Ignore sub-threshold noise when phone is stationary
+            if (shortestDiff.abs() > 0.15) {
+              _fusionHeading = (_fusionHeading + shortestDiff * 0.45 + 360) % 360;
             }
           }
         }
