@@ -138,28 +138,33 @@ class _GameScreenState extends State<GameScreen>
                   child: const Text('🎸', style: TextStyle(fontSize: 16)),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Bocchi Jumpy Game',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: isPlaying
-                        ? Colors.white
-                        : AppColors.getTextPrimary(context),
+                Flexible(
+                  child: Text(
+                    isPlaying ? 'Bocchi Jumpy' : 'Bocchi Jumpy Game',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: isPlaying
+                          ? Colors.white
+                          : AppColors.getTextPrimary(context),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             actions: [
-              // Logo Tanda Tanya (Panduan Lompat Pixel)
-              IconButton(
-                key: const Key('btn_game_how_to_play'),
-                icon: const Icon(Icons.help_outline_rounded),
-                tooltip: 'Panduan Lompat Pixel',
-                onPressed: () => _showHowToPlayDialog(context),
-              ),
+              // Logo Tanda Tanya (Panduan Lompat Pixel - hanya tampil di lobby agar tidak sesak saat main)
+              if (!isPlaying)
+                IconButton(
+                  key: const Key('btn_game_how_to_play'),
+                  icon: const Icon(Icons.help_outline_rounded),
+                  tooltip: 'Panduan Lompat Pixel',
+                  onPressed: () => _showHowToPlayDialog(context),
+                ),
               // Gyro Tilt Toggle Button
               IconButton(
+                visualDensity: isPlaying ? VisualDensity.compact : null,
                 icon: Icon(
                   _isGyroEnabled
                       ? Icons.screen_rotation_rounded
@@ -190,6 +195,7 @@ class _GameScreenState extends State<GameScreen>
               ),
               if (_controller.isPlaying)
                 IconButton(
+                  visualDensity: VisualDensity.compact,
                   icon: Icon(
                     _controller.isPaused
                         ? Icons.play_arrow_rounded
@@ -201,6 +207,7 @@ class _GameScreenState extends State<GameScreen>
                 ),
               if (_controller.isPlaying)
                 IconButton(
+                  visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close_rounded,
                       color: AppColors.error),
                   tooltip: 'Keluar',
@@ -779,106 +786,118 @@ class _GameScreenState extends State<GameScreen>
 
           // Top Retro HUD (Score & High Score)
           Positioned(
-            top: 14,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Score Box
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFFF7EB3),
-                      width: 1.5,
-                    ),
-                  ),
+            top: 10,
+            left: 12,
+            right: 12,
+            child: SafeArea(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: size.width - 24,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('🎸', style: TextStyle(fontSize: 14)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'SCORE: ${_controller.score}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Gyro Indicator Pill
-                if (_isGyroEnabled)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D225A).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFFF7EB3),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.screen_rotation_rounded,
-                          color: Color(0xFFFF7EB3),
-                          size: 13,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'GYRO TILT',
-                          style: TextStyle(
-                            color: Color(0xFFFF7EB3),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 10,
-                            letterSpacing: 0.8,
+                      // Score Box
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFFF7EB3),
+                            width: 1.5,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🎸', style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 5),
+                            Text(
+                              '${_controller.score}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                // High Score Box
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFFFD54F),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.emoji_events_rounded,
-                          color: Color(0xFFFFD54F), size: 15),
-                      const SizedBox(width: 4),
-                      Text(
-                        'HI: ${_controller.highScore}',
-                        style: const TextStyle(
-                          color: Color(0xFFFFD54F),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
-                          letterSpacing: 1,
+                      // Gyro Indicator Pill
+                      if (_isGyroEnabled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2D225A)
+                                .withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFFF7EB3),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.screen_rotation_rounded,
+                                color: Color(0xFFFF7EB3),
+                                size: 12,
+                              ),
+                              SizedBox(width: 3),
+                              Text(
+                                'GYRO',
+                                style: TextStyle(
+                                  color: Color(0xFFFF7EB3),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 9.5,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // High Score Box
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFFFD54F),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.emoji_events_rounded,
+                                color: Color(0xFFFFD54F), size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              'HI: ${_controller.highScore}',
+                              style: const TextStyle(
+                                color: Color(0xFFFFD54F),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12.5,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -891,9 +910,10 @@ class _GameScreenState extends State<GameScreen>
   // ===========================================================================
   Widget _buildGameOverView(Size size) {
     return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.all(26),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Container(
+          padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1A38),
           borderRadius: BorderRadius.circular(22),
@@ -1052,7 +1072,8 @@ class _GameScreenState extends State<GameScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
