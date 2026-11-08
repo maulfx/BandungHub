@@ -79,6 +79,11 @@ class ItineraryExportService {
           buffer.writeln(
             '   ${i + 1}. ${item.destinationName} [${item.destinationCategory}]',
           );
+          if (item.startTime != null && item.endTime != null) {
+            buffer.writeln(
+              '      • Waktu Kunjungan: ${item.startTime} - ${item.endTime} WIB',
+            );
+          }
           buffer.writeln('      • Tiket: $priceStr / orang');
           if (item.notes.isNotEmpty) {
             buffer.writeln('      • Catatan: ${item.notes}');

@@ -7,6 +7,7 @@ import '../../../data/sources/bandung_destinations.dart';
 import '../../../data/repositories/itinerary_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../models/app_notification.dart';
+import '../../../models/destination.dart';
 import '../../../models/itinerary.dart';
 import '../widgets/itinerary_export_sheet.dart';
 import '../../../services/travel_converter_service.dart';
@@ -141,28 +142,24 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                             '${dest.category} • ${_formatItemPrice(dest.estimatedPrice)}',
                             style: const TextStyle(fontSize: 12),
                           ),
+                          onTap: () {
+                            _openScheduleVisitDialog(
+                              itinerary: itinerary,
+                              destination: dest,
+                              dayNumber: _selectedDay,
+                            );
+                          },
                           trailing: IconButton(
                             icon: const Icon(
                               Icons.add_circle_rounded,
                               color: AppColors.primary,
                             ),
-                            onPressed: () async {
-                              await _repository.addDestinationToItinerary(
-                                itineraryId: itinerary.id,
+                            onPressed: () {
+                              _openScheduleVisitDialog(
+                                itinerary: itinerary,
                                 destination: dest,
                                 dayNumber: _selectedDay,
                               );
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${dest.name} ditambahkan ke Hari $_selectedDay!',
-                                    ),
-                                    backgroundColor: AppColors.primary,
-                                  ),
-                                );
-                              }
                             },
                           ),
                         );
@@ -1099,10 +1096,42 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     scrollDirection: Axis.horizontal,
-                    itemCount: itinerary.durationDays,
+                    itemCount:
+                        itinerary.durationDays +
+                        (itinerary.durationDays < 7 ? 1 : 0),
                     separatorBuilder: (context, index) =>
                         const SizedBox(width: 8),
                     itemBuilder: (context, index) {
+                      if (index == itinerary.durationDays &&
+                          itinerary.durationDays < 7) {
+                        return ActionChip(
+                          avatar: const Icon(
+                            Icons.add,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          label: const Text('Tambah Hari (Maks. 7)'),
+                          onPressed: () async {
+                            if (itinerary.durationDays < 7) {
+                              final newDays = itinerary.durationDays + 1;
+                              await _repository.updateItinerary(
+                                itinerary.copyWith(durationDays: newDays),
+                              );
+                              setState(() => _selectedDay = newDays);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Hari $newDays berhasil ditambahkan ke rencana!',
+                                    ),
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        );
+                      }
                       final day = index + 1;
                       final isSelected = _selectedDay == day;
                       final count = (itemsByDay[day] ?? []).length;
@@ -1276,6 +1305,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                                   Expanded(
                                                     child: Text(
                                                       _getItemEstimatedTime(
+                                                        item,
                                                         item.visitOrder,
                                                         _selectedTimezone,
                                                       ),
@@ -1294,6 +1324,41 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                                               ),
                                             ],
                                           ),
+                                        ),
+                                        // Edit Time button
+                                        IconButton(
+                                          tooltip: 'Ubah Waktu Kunjungan',
+                                          icon: const Icon(
+                                            Icons.edit_calendar_rounded,
+                                            size: 20,
+                                            color: AppColors.primary,
+                                          ),
+                                          onPressed: () {
+                                            final dest = BandungDestinations.list.firstWhere(
+                                              (d) =>
+                                                  d.id == item.destinationId ||
+                                                  d.name == item.destinationName,
+                                              orElse: () => Destination(
+                                                id: item.destinationId,
+                                                name: item.destinationName,
+                                                description: '',
+                                                category: item.destinationCategory,
+                                                address: '',
+                                                latitude: -6.9175,
+                                                longitude: 107.6191,
+                                                estimatedPrice: item.ticketPrice,
+                                                operationalHours: 'Setiap Hari 08.00 - 18.00 WIB',
+                                                imageUrl: item.imageUrl,
+                                                rating: 4.5,
+                                              ),
+                                            );
+                                            _openScheduleVisitDialog(
+                                              itinerary: itinerary,
+                                              destination: dest,
+                                              dayNumber: _selectedDay,
+                                              existingItem: item,
+                                            );
+                                          },
                                         ),
                                         // Reorder Up/Down buttons
                                         Column(
@@ -1391,17 +1456,657 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
     return '$idr (≈ ${TravelConverterService.formatCurrency(converted, _selectedCurrencyCode)})';
   }
 
-  String _getItemEstimatedTime(int order, TimezoneInfo tz) {
-    final baseHours = [9, 12, 15, 18, 20];
-    final slotHour =
-        (order - 1) < baseHours.length ? baseHours[order - 1] : 9 + (order * 2);
+  String _getItemEstimatedTime(ItineraryItem item, int order, TimezoneInfo tz) {
+    if (item.startTime != null && item.endTime != null) {
+      final startParts = item.startTime!.split(':');
+      final startH = int.tryParse(startParts[0]) ?? 9;
+      final startM =
+          startParts.length > 1 ? (int.tryParse(startParts[1]) ?? 0) : 0;
+      final durationStr =
+          item.durationMinutes != null ? ' (${item.durationMinutes} mnt)' : '';
+      final bandungTime = '${item.startTime} - ${item.endTime} WIB$durationStr';
+      if (tz.code == 'WIB') {
+        return 'Jadwal: $bandungTime';
+      }
+      final targetH = (startH + tz.diffHoursFromBandung) % 24;
+      final targetTime =
+          '${targetH.toString().padLeft(2, '0')}:${startM.toString().padLeft(2, '0')} ${tz.code}';
+      return '$bandungTime (Zona Anda: $targetTime)';
+    }
+
+    // Fallback yang aman dan dibatasi agar TIDAK PERNAH melebihi 24.00 WIB (tidak ada jam 25.00!)
+    final baseHours = [9, 11, 14, 16, 19, 21];
+    final slotHour = (order - 1) < baseHours.length
+        ? baseHours[order - 1]
+        : (8 + (order * 2)).clamp(8, 22);
     final bandungTime = '${slotHour.toString().padLeft(2, '0')}:00 WIB';
     if (tz.code == 'WIB') {
-      return 'Kunjungan: $bandungTime';
+      return 'Estimasi: $bandungTime';
     }
     final targetHour = (slotHour + tz.diffHoursFromBandung) % 24;
     final targetTime = '${targetHour.toString().padLeft(2, '0')}:00 ${tz.code}';
     return '$bandungTime (Waktu Anda: $targetTime)';
+  }
+
+  OperationalHoursInfo _parseOperationalHours(String raw) {
+    if (raw.toLowerCase().contains('24 jam')) {
+      return OperationalHoursInfo(
+        openHour: 0,
+        openMinute: 0,
+        closeHour: 23,
+        closeMinute: 59,
+        is24Hours: true,
+        rawText: raw,
+      );
+    }
+
+    final regex = RegExp(
+      r'(\d{1,2})[.:](\d{2})\s*[-–—s.d.to]+\s*(\d{1,2})[.:](\d{2})',
+    );
+    final match = regex.firstMatch(raw);
+    if (match != null) {
+      final h1 = int.parse(match.group(1)!);
+      final m1 = int.parse(match.group(2)!);
+      final h2 = int.parse(match.group(3)!);
+      final m2 = int.parse(match.group(4)!);
+      return OperationalHoursInfo(
+        openHour: h1,
+        openMinute: m1,
+        closeHour: h2,
+        closeMinute: m2,
+        is24Hours: false,
+        rawText: raw,
+      );
+    }
+
+    return OperationalHoursInfo(
+      openHour: 8,
+      openMinute: 0,
+      closeHour: 18,
+      closeMinute: 0,
+      is24Hours: false,
+      rawText: raw,
+    );
+  }
+
+  void _openScheduleVisitDialog({
+    required Itinerary itinerary,
+    required Destination destination,
+    required int dayNumber,
+    ItineraryItem? existingItem,
+  }) {
+    final opInfo = _parseOperationalHours(destination.operationalHours);
+
+    int parseTimeToMinutes(String timeStr) {
+      final parts = timeStr.split(':');
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      return h * 60 + m;
+    }
+
+    final sameDayScheduledItems = itinerary.items.where((item) {
+      return item.dayNumber == dayNumber &&
+          item.id != existingItem?.id &&
+          item.startTime != null &&
+          item.endTime != null &&
+          item.startTime!.contains(':') &&
+          item.endTime!.contains(':');
+    }).toList()
+      ..sort((a, b) =>
+          parseTimeToMinutes(a.startTime!).compareTo(parseTimeToMinutes(b.startTime!)));
+
+    TimeOfDay selectedStartTime;
+    if (existingItem?.startTime != null) {
+      final parts = existingItem!.startTime!.split(':');
+      selectedStartTime = TimeOfDay(
+        hour: int.tryParse(parts[0]) ?? opInfo.openHour,
+        minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0,
+      );
+    } else {
+      if (sameDayScheduledItems.isNotEmpty) {
+        final lastEndMinutes =
+            parseTimeToMinutes(sameDayScheduledItems.last.endTime!);
+        final fitsInOpHours = opInfo.is24Hours ||
+            (lastEndMinutes >= opInfo.openTotalMinutes &&
+                lastEndMinutes + 60 <= opInfo.closeTotalMinutes);
+        if (fitsInOpHours && lastEndMinutes + 60 <= 24 * 60) {
+          selectedStartTime = TimeOfDay(
+            hour: (lastEndMinutes ~/ 60) % 24,
+            minute: lastEndMinutes % 60,
+          );
+        } else {
+          final defaultHour = opInfo.is24Hours ? 9 : opInfo.openHour;
+          final defaultMin = opInfo.is24Hours ? 0 : opInfo.openMinute;
+          selectedStartTime = TimeOfDay(hour: defaultHour, minute: defaultMin);
+        }
+      } else {
+        final defaultHour = opInfo.is24Hours ? 9 : opInfo.openHour;
+        final defaultMin = opInfo.is24Hours ? 0 : opInfo.openMinute;
+        selectedStartTime = TimeOfDay(hour: defaultHour, minute: defaultMin);
+      }
+    }
+
+    int selectedDurationMinutes = existingItem?.durationMinutes ?? 90;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final startTotal =
+                selectedStartTime.hour * 60 + selectedStartTime.minute;
+            final endTotal = startTotal + selectedDurationMinutes;
+            final endHour = (endTotal ~/ 60) % 24;
+            final endMinute = endTotal % 60;
+
+            final startFormatted =
+                '${selectedStartTime.hour.toString().padLeft(2, '0')}:${selectedStartTime.minute.toString().padLeft(2, '0')}';
+            final endFormatted =
+                '${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}';
+
+            final bool isPastMidnight = endTotal >= 24 * 60;
+            final bool isWithinHours = opInfo.is24Hours ||
+                (startTotal >= opInfo.openTotalMinutes &&
+                    endTotal <= opInfo.closeTotalMinutes);
+
+            // Collision detection with other destinations on the same day
+            ItineraryItem? collidingItem;
+            for (final item in sameDayScheduledItems) {
+              final itemStart = parseTimeToMinutes(item.startTime!);
+              final itemEnd = parseTimeToMinutes(item.endTime!);
+              if (startTotal < itemEnd && endTotal > itemStart) {
+                collidingItem = item;
+                break;
+              }
+            }
+            final bool hasCollision = collidingItem != null;
+            final bool isValid = !isPastMidnight && isWithinHours && !hasCollision;
+
+            final String warningMessage;
+            if (isPastMidnight) {
+              warningMessage =
+                  'Jadwal kunjungan melebihi batas hari (24.00 WIB). Silakan kurangi jam mulai atau durasi.';
+            } else if (!isWithinHours) {
+              final openStr =
+                  '${opInfo.openHour.toString().padLeft(2, '0')}:${opInfo.openMinute.toString().padLeft(2, '0')}';
+              final closeStr =
+                  '${opInfo.closeHour.toString().padLeft(2, '0')}:${opInfo.closeMinute.toString().padLeft(2, '0')}';
+              warningMessage =
+                  'Waktu kunjungan ($startFormatted - $endFormatted WIB) berada di luar jam operasional ($openStr - $closeStr WIB). Silakan sesuaikan jam atau durasi.';
+            } else if (collidingItem != null) {
+              warningMessage =
+                  'Bentrok dengan jadwal "${collidingItem.destinationName}" (${collidingItem.startTime} - ${collidingItem.endTime} WIB). Silakan pilih jam atau durasi lain.';
+            } else {
+              warningMessage = '';
+            }
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      existingItem != null
+                          ? 'Ubah Waktu Kunjungan'
+                          : 'Pilih Waktu & Durasi Kunjungan',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${destination.name} • Hari $dayNumber',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Operational Hours Banner
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.access_time_filled_rounded,
+                            size: 18,
+                            color: Colors.amber.shade900,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Jam Operasional Destinasi:',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  destination.operationalHours,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Existing items on this day
+                    if (sameDayScheduledItems.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.event_note_rounded,
+                                  size: 16,
+                                  color: Color(0xFF15803D),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Jadwal Wisata Lain di Hari $dayNumber:',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF166534),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ...sameDayScheduledItems.map((item) {
+                              final itemStart =
+                                  parseTimeToMinutes(item.startTime!);
+                              final itemEnd =
+                                  parseTimeToMinutes(item.endTime!);
+                              final isColliding = startTotal < itemEnd &&
+                                  endTotal > itemStart;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isColliding
+                                      ? Colors.red.shade50
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isColliding
+                                        ? Colors.red.shade300
+                                        : Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isColliding
+                                          ? Icons.error_rounded
+                                          : Icons.schedule_rounded,
+                                      size: 14,
+                                      color: isColliding
+                                          ? Colors.red.shade700
+                                          : AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '${item.destinationName} (${item.startTime} - ${item.endTime} WIB)',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: isColliding
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                          color: isColliding
+                                              ? Colors.red.shade900
+                                              : Colors.grey.shade800,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isColliding)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade100,
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Bentrok',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // 1. Pilih Jam Mulai
+                    const Text(
+                      '1. Jam Mulai Kunjungan (WIB)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: selectedStartTime,
+                          helpText: 'PILIH JAM MULAI KUNJUNGAN',
+                        );
+                        if (picked != null) {
+                          setModalState(() {
+                            selectedStartTime = picked;
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderLight),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.alarm_rounded,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '$startFormatted WIB',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Ganti Jam',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Pilih Durasi Kunjungan
+                    const Text(
+                      '2. Durasi Kunjungan (Bebas Dipilih)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        {'label': '30 Menit', 'mins': 30},
+                        {'label': '1 Jam', 'mins': 60},
+                        {'label': '1.5 Jam', 'mins': 90},
+                        {'label': '2 Jam', 'mins': 120},
+                        {'label': '2.5 Jam', 'mins': 150},
+                        {'label': '3 Jam', 'mins': 180},
+                        {'label': '4 Jam', 'mins': 240},
+                      ].map((dur) {
+                        final mins = dur['mins'] as int;
+                        final isSelected = selectedDurationMinutes == mins;
+                        return ChoiceChip(
+                          label: Text(dur['label'] as String),
+                          selected: isSelected,
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? Colors.white
+                                : AppColors.textPrimaryLight,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setModalState(() {
+                                selectedDurationMinutes = mins;
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Status & Validasi Jam Operasional
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isValid
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isValid
+                              ? Colors.green.shade300
+                              : Colors.red.shade300,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                isValid
+                                    ? Icons.check_circle_rounded
+                                    : Icons.warning_rounded,
+                                size: 18,
+                                color: isValid
+                                    ? Colors.green.shade800
+                                    : Colors.red.shade800,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  isValid
+                                      ? 'Jadwal Kunjungan: $startFormatted - $endFormatted WIB'
+                                      : (hasCollision
+                                          ? 'Jadwal Bentrok dengan Wisata Lain'
+                                          : 'Waktu Tidak Valid'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: isValid
+                                        ? Colors.green.shade900
+                                        : Colors.red.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!isValid) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              warningMessage,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red.shade900,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Submit Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: Icon(
+                          existingItem != null
+                              ? Icons.save_rounded
+                              : Icons.add_rounded,
+                        ),
+                        label: Text(
+                          existingItem != null
+                              ? 'Simpan Perubahan Waktu'
+                              : 'Tambahkan ke Hari $dayNumber',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isValid
+                              ? AppColors.primary
+                              : Colors.grey.shade400,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: !isValid
+                            ? null
+                            : () async {
+                                if (existingItem != null) {
+                                  await _repository
+                                      .updateDestinationTimeInItinerary(
+                                        itineraryId: itinerary.id,
+                                        itemId: existingItem.id,
+                                        startTime: startFormatted,
+                                        endTime: endFormatted,
+                                        durationMinutes:
+                                            selectedDurationMinutes,
+                                      );
+                                } else {
+                                  await _repository.addDestinationToItinerary(
+                                    itineraryId: itinerary.id,
+                                    destination: destination,
+                                    dayNumber: dayNumber,
+                                    startTime: startFormatted,
+                                    endTime: endFormatted,
+                                    durationMinutes:
+                                        selectedDurationMinutes,
+                                  );
+                                }
+
+                                if (context.mounted) {
+                                  Navigator.pop(sheetContext);
+                                  if (existingItem == null) {
+                                    Navigator.pop(context);
+                                  }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        existingItem != null
+                                            ? 'Jadwal ${destination.name} berhasil diperbarui ($startFormatted - $endFormatted WIB)!'
+                                            : '${destination.name} berhasil dijadwalkan pada $startFormatted - $endFormatted WIB!',
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                    ),
+                                  );
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildBudgetRow(String label, double amountInIdr) {
@@ -1448,4 +2153,25 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       ),
     );
   }
+}
+
+class OperationalHoursInfo {
+  final int openHour;
+  final int openMinute;
+  final int closeHour;
+  final int closeMinute;
+  final bool is24Hours;
+  final String rawText;
+
+  const OperationalHoursInfo({
+    required this.openHour,
+    required this.openMinute,
+    required this.closeHour,
+    required this.closeMinute,
+    required this.is24Hours,
+    required this.rawText,
+  });
+
+  int get openTotalMinutes => openHour * 60 + openMinute;
+  int get closeTotalMinutes => closeHour * 60 + closeMinute;
 }

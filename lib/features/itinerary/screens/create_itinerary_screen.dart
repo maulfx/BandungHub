@@ -182,10 +182,10 @@ class _CreateItineraryScreenState extends State<CreateItineraryScreen> {
                             child: DropdownButton<int>(
                               value: _durationDays,
                               isExpanded: true,
-                              items: [1, 2, 3, 4, 5, 7].map((days) {
+                              items: [1, 2, 3, 4, 5, 6, 7].map((days) {
                                 return DropdownMenuItem(
                                   value: days,
-                                  child: Text('$days Hari'),
+                                  child: Text('$days Hari (Maksimal 7 Hari)'),
                                 );
                               }).toList(),
                               onChanged: (val) {

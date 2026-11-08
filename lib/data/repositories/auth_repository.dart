@@ -118,8 +118,7 @@ class AuthRepository extends ChangeNotifier {
         return false;
       }
 
-      final registered = await _storage.getRegisteredUsers();
-      UserProfile? user = registered[cleanEmail];
+      UserProfile? user = await _storage.getUserByEmail(cleanEmail);
 
       if (user == null &&
           (cleanEmail == 'admin@bandunghub.id' ||

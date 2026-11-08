@@ -15,6 +15,10 @@ class AuthStorage {
   static const String _keyPassHashPrefix = 'bandunghub_pwd_';
   static const String _keyBiometricUserEmail = 'bandunghub_biometric_user_email';
 
+  static const AndroidOptions _androidOptions = AndroidOptions(
+    resetOnError: true,
+  );
+
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _useSecureStorage = true;
   Database? _db;
@@ -37,6 +41,7 @@ class AuthStorage {
               email TEXT NOT NULL,
               avatar_url TEXT,
               pin_hash TEXT,
+              password_hash TEXT,
               is_biometric_enabled INTEGER NOT NULL,
               is_guest INTEGER NOT NULL,
               created_at TEXT NOT NULL,
@@ -52,12 +57,16 @@ class AuthStorage {
               email TEXT NOT NULL,
               avatar_url TEXT,
               pin_hash TEXT,
+              password_hash TEXT,
               is_biometric_enabled INTEGER NOT NULL,
               is_guest INTEGER NOT NULL,
               created_at TEXT NOT NULL,
               last_login_at TEXT NOT NULL
             )
           ''');
+          try {
+            await db.execute('ALTER TABLE user_profiles ADD COLUMN password_hash TEXT');
+          } catch (_) {}
         },
       );
       return _db;
@@ -67,29 +76,42 @@ class AuthStorage {
     }
   }
 
-  // Safe write into secure storage with SharedPreferences fallback
+  // Safe write into both SharedPreferences AND SecureStorage (Dual-Store for rock-solid persistence)
   Future<void> _safeWrite(String key, String value) async {
+    // 1. Selalu simpan ke SharedPreferences terlebih dahulu agar langsung tersedia di disk
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, value);
+    } catch (e) {
+      debugPrint('SharedPreferences write error: $e');
+    }
+
+    // 2. Simpan juga ke SecureStorage
     if (_useSecureStorage) {
       try {
-        await _secureStorage.write(key: key, value: value);
-        return;
+        await _secureStorage.write(
+          key: key,
+          value: value,
+          aOptions: _androidOptions,
+        );
       } catch (e) {
         debugPrint(
-          'SecureStorage write error, falling back to SharedPreferences: $e',
+          'SecureStorage write error, using SharedPreferences fallback: $e',
         );
         _useSecureStorage = false;
       }
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
   }
 
-  // Safe read
+  // Safe read with dual fallback
   Future<String?> _safeRead(String key) async {
     if (_useSecureStorage) {
       try {
-        final val = await _secureStorage.read(key: key);
-        if (val != null) return val;
+        final val = await _secureStorage.read(
+          key: key,
+          aOptions: _androidOptions,
+        );
+        if (val != null && val.isNotEmpty) return val;
       } catch (e) {
         debugPrint(
           'SecureStorage read error, falling back to SharedPreferences: $e',
@@ -97,21 +119,28 @@ class AuthStorage {
         _useSecureStorage = false;
       }
     }
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(key);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(key);
+    } catch (_) {
+      return null;
+    }
   }
 
   // Safe delete
   Future<void> _safeDelete(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(key);
+    } catch (_) {}
+
     if (_useSecureStorage) {
       try {
-        await _secureStorage.delete(key: key);
+        await _secureStorage.delete(key: key, aOptions: _androidOptions);
       } catch (e) {
         _useSecureStorage = false;
       }
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(key);
   }
 
   // Save current active session
@@ -126,6 +155,19 @@ class AuthStorage {
     try {
       final db = await _getDatabase();
       if (db != null) {
+        String? existingPassHash;
+        try {
+          final existing = await db.query(
+            'user_profiles',
+            columns: ['password_hash'],
+            where: 'id = ?',
+            whereArgs: [user.id],
+          );
+          if (existing.isNotEmpty) {
+            existingPassHash = existing.first['password_hash'] as String?;
+          }
+        } catch (_) {}
+
         await db.insert(
           'user_profiles',
           {
@@ -134,6 +176,7 @@ class AuthStorage {
             'email': user.email,
             'avatar_url': user.avatarUrl,
             'pin_hash': user.pinHash,
+            'password_hash': existingPassHash,
             'is_biometric_enabled': user.isBiometricEnabled ? 1 : 0,
             'is_guest': user.isGuest ? 1 : 0,
             'created_at': user.createdAt.toIso8601String(),
@@ -225,9 +268,24 @@ class AuthStorage {
     await _safeDelete(_keySessionToken);
   }
 
-  // Store password hash for an email
+  // Store password hash for an email with multi-layer persistence
   Future<void> savePasswordHash(String email, String passwordHash) async {
-    await _safeWrite('$_keyPassHashPrefix${email.toLowerCase()}', passwordHash);
+    final cleanEmail = email.toLowerCase().trim();
+    // 1. Dual write to SharedPreferences & SecureStorage
+    await _safeWrite('$_keyPassHashPrefix$cleanEmail', passwordHash);
+
+    // 2. Backup to SQLite database table user_profiles
+    try {
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.update(
+          'user_profiles',
+          {'password_hash': passwordHash},
+          where: 'LOWER(email) = ?',
+          whereArgs: [cleanEmail],
+        );
+      }
+    } catch (_) {}
   }
 
   // Biometric authorization tracking for returning users
@@ -243,17 +301,46 @@ class AuthStorage {
     await _safeDelete(_keyBiometricUserEmail);
   }
 
-  // Verify email password
+  // Verify email password with multi-tier fallback (SecureStorage -> SharedPreferences -> SQLite -> Built-ins)
   Future<bool> verifyPassword(String email, String passwordHash) async {
     final cleanEmail = email.toLowerCase().trim();
-    final stored = await _safeRead('$_keyPassHashPrefix$cleanEmail');
-    if (stored == null) {
+
+    // Tier 1: Try _safeRead (SecureStorage + SharedPreferences)
+    String? stored = await _safeRead('$_keyPassHashPrefix$cleanEmail');
+
+    // Tier 2: Direct SharedPreferences fallback
+    if (stored == null || stored.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        stored = prefs.getString('$_keyPassHashPrefix$cleanEmail');
+      } catch (_) {}
+    }
+
+    // Tier 3: Direct SQLite user_profiles database fallback
+    if (stored == null || stored.isEmpty) {
+      try {
+        final db = await _getDatabase();
+        if (db != null) {
+          final maps = await db.query(
+            'user_profiles',
+            columns: ['password_hash'],
+            where: 'LOWER(email) = ?',
+            whereArgs: [cleanEmail],
+          );
+          if (maps.isNotEmpty) {
+            stored = maps.first['password_hash'] as String?;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (stored == null || stored.isEmpty) {
       // Default Admin account: admin@bandunghub.id / admin123
       if (cleanEmail == 'admin@bandunghub.id' ||
           cleanEmail == 'admin@gmail.com') {
         return passwordHash == UserProfile.hashSecret('admin123');
       }
-      // Demo user email
+      // Demo user email: traveler@bandunghub.id / bandung123 or 123456
       if (cleanEmail == 'traveler@bandunghub.id') {
         return passwordHash == UserProfile.hashSecret('bandung123') ||
             passwordHash == UserProfile.hashSecret('123456');
@@ -300,5 +387,45 @@ class AuthStorage {
         demo.email.toLowerCase(): demo,
       };
     }
+  }
+
+  // Get user profile by email with SQLite and SharedPreferences lookup
+  Future<UserProfile?> getUserByEmail(String email) async {
+    final cleanEmail = email.toLowerCase().trim();
+    final registered = await getRegisteredUsers();
+    if (registered.containsKey(cleanEmail)) {
+      return registered[cleanEmail];
+    }
+    try {
+      final db = await _getDatabase();
+      if (db != null) {
+        final maps = await db.query(
+          'user_profiles',
+          where: 'LOWER(email) = ?',
+          whereArgs: [cleanEmail],
+          limit: 1,
+        );
+        if (maps.isNotEmpty) {
+          final row = maps.first;
+          return UserProfile(
+            id: row['id'] as String,
+            name: row['name'] as String,
+            email: row['email'] as String,
+            avatarUrl: row['avatar_url'] as String?,
+            pinHash: row['pin_hash'] as String?,
+            isBiometricEnabled:
+                (row['is_biometric_enabled'] as int? ?? 0) == 1,
+            isGuest: (row['is_guest'] as int? ?? 0) == 1,
+            createdAt:
+                DateTime.tryParse(row['created_at'] as String? ?? '') ??
+                    DateTime.now(),
+            lastLoginAt:
+                DateTime.tryParse(row['last_login_at'] as String? ?? '') ??
+                    DateTime.now(),
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }

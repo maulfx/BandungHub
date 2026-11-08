@@ -14,6 +14,7 @@ import '../../destinations/screens/destination_detail_screen.dart';
 import '../../lens/screens/bandung_lens_screen.dart';
 import '../../notifications/screens/notification_center_screen.dart';
 import '../../offline/widgets/offline_banner_widget.dart';
+import '../../profile/screens/profile_screen.dart';
 import '../../recommendations/screens/ai_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -245,49 +246,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(width: 4),
                               // Demonstration State Toggle popup menu
-                              PopupMenuButton<String>(
-                            tooltip: 'Simulasi State (Loading/Error)',
-                            icon: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                shape: BoxShape.circle,
+                              IconButton(
+                                key: const Key('btn_home_profile'),
+                                tooltip: 'Profil & Pengaturan Akun',
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.primary.withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.person_rounded,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ProfileScreen(),
+                                    ),
+                                  );
+                                },
                               ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                size: 20,
-                                color: AppColors.textSecondaryLight,
-                              ),
-                            ),
-                            onSelected: (value) {
-                              setState(() {
-                                if (value == 'normal') {
-                                  _isLoading = false;
-                                  _hasError = false;
-                                } else if (value == 'loading') {
-                                  _isLoading = true;
-                                  _hasError = false;
-                                } else if (value == 'error') {
-                                  _isLoading = false;
-                                  _hasError = true;
-                                }
-                              });
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'normal',
-                                child: Text('State: Normal Data'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'loading',
-                                child: Text('Simulasi: Loading State'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'error',
-                                child: Text('Simulasi: Error State'),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ],

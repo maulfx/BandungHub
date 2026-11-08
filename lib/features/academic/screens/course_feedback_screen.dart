@@ -18,17 +18,17 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
   static const String _prefFeedbackKey = 'academic_course_feedback_v2';
 
   final _formKey = GlobalKey<FormState>();
-  final _lecturerController = TextEditingController(text: 'Dosen Pengampu PAM');
+  final _lecturerController = TextEditingController();
 
   // Mahasiswa 1
-  final _student1NameController = TextEditingController(text: 'Achmad Maulana');
-  final _student1NimController = TextEditingController(text: '12345678');
+  final _student1NameController = TextEditingController();
+  final _student1NimController = TextEditingController();
   final _impressions1Controller = TextEditingController();
   final _suggestions1Controller = TextEditingController();
 
   // Mahasiswa 2
-  final _student2NameController = TextEditingController(text: 'Mahasiswa 2 (Rekan Tim)');
-  final _student2NimController = TextEditingController(text: '87654321');
+  final _student2NameController = TextEditingController();
+  final _student2NimController = TextEditingController();
   final _impressions2Controller = TextEditingController();
   final _suggestions2Controller = TextEditingController();
 
@@ -53,25 +53,6 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
     'Responsive Design & Dark Mode',
     'Unit & Widget Testing (100% Pass)',
   ];
-
-  static const String _defaultImpression1 =
-      'Mata kuliah Pemrograman Aplikasi Mobile (PAM) ini memberikan pemahaman mendalam mengenai arsitektur perangkat lunak Flutter, '
-      'state management reaktif, sinkronisasi offline-first SQLite, serta desain antarmuka modern yang humanis. '
-      'Pengerjaan proyek BandungHub membuktikan bahwa aplikasi mobile dapat dibangun secara komprehensif dengan standar industri '
-      'yang tinggi, kaya fitur, dan reliabel tanpa bergantung pada API berbayar.';
-
-  static const String _defaultSuggestion1 =
-      'Materi perkuliahan sudah sangat aplikatif dan terstruktur. Saran konstruktif ke depan adalah penambahan modul '
-      'alur kerja CI/CD otomatis dengan GitHub Actions untuk kompilasi APK/AAB serta eksplorasi Flutter Multiplatform.';
-
-  static const String _defaultImpression2 =
-      'Praktikum dan tugas besar ini sangat menantang dan memotivasi untuk mengeksplorasi integrasi teknologi mutakhir, '
-      'seperti sensor kompas penunjuk arah, computer vision AI Lens, dan pembuktian integritas data ulasan berbasis blockchain. '
-      'Kolaborasi tim mengajarkan pentingnya modularitas kode dan manajemen state yang bersih.';
-
-  static const String _defaultSuggestion2 =
-      'Bimbingan praktikum dari dosen pengampu dan asisten lab sudah sangat interaktif dan responsif. Saran pengembangan '
-      'adalah penambahan sesi bimbingan optimasi memory profiling dan manajemen dependensi enterprise.';
 
   @override
   void initState() {
@@ -102,32 +83,23 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
       if (raw != null) {
         final data = jsonDecode(raw) as Map<String, dynamic>;
         setState(() {
-          _lecturerController.text =
-              data['lecturer'] ?? _lecturerController.text;
+          _lecturerController.text = data['lecturer'] ?? '';
 
           // Mahasiswa 1
-          _student1NameController.text = data['student1Name'] ??
-              data['studentName'] ??
-              _student1NameController.text;
-          _student1NimController.text = data['student1Nim'] ??
-              data['studentNim'] ??
-              _student1NimController.text;
-          _impressions1Controller.text = data['impressions1'] ??
-              data['impressions'] ??
-              _defaultImpression1;
-          _suggestions1Controller.text = data['suggestions1'] ??
-              data['suggestions'] ??
-              _defaultSuggestion1;
+          _student1NameController.text =
+              data['student1Name'] ?? data['studentName'] ?? '';
+          _student1NimController.text =
+              data['student1Nim'] ?? data['studentNim'] ?? '';
+          _impressions1Controller.text =
+              data['impressions1'] ?? data['impressions'] ?? '';
+          _suggestions1Controller.text =
+              data['suggestions1'] ?? data['suggestions'] ?? '';
 
           // Mahasiswa 2
-          _student2NameController.text =
-              data['student2Name'] ?? _student2NameController.text;
-          _student2NimController.text =
-              data['student2Nim'] ?? _student2NimController.text;
-          _impressions2Controller.text =
-              data['impressions2'] ?? _defaultImpression2;
-          _suggestions2Controller.text =
-              data['suggestions2'] ?? _defaultSuggestion2;
+          _student2NameController.text = data['student2Name'] ?? '';
+          _student2NimController.text = data['student2Nim'] ?? '';
+          _impressions2Controller.text = data['impressions2'] ?? '';
+          _suggestions2Controller.text = data['suggestions2'] ?? '';
 
           _rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
           if (data['topics'] is List) {
@@ -139,16 +111,15 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
           _isSaved = true;
         });
       } else {
-        _impressions1Controller.text = _defaultImpression1;
-        _suggestions1Controller.text = _defaultSuggestion1;
-        _impressions2Controller.text = _defaultImpression2;
-        _suggestions2Controller.text = _defaultSuggestion2;
+        // Jika belum ada data yang disimpan, biarkan seluruh isian kosong
+        setState(() {
+          _isSaved = false;
+        });
       }
     } catch (_) {
-      _impressions1Controller.text = _defaultImpression1;
-      _suggestions1Controller.text = _defaultSuggestion1;
-      _impressions2Controller.text = _defaultImpression2;
-      _suggestions2Controller.text = _defaultSuggestion2;
+      setState(() {
+        _isSaved = false;
+      });
     }
 
     setState(() {
@@ -332,7 +303,11 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -349,17 +324,17 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
                   ),
                 ),
               ),
-              const Spacer(),
               Text(
-                'NIM: $nim',
+                nim.isNotEmpty ? 'NIM: $nim' : 'NIM: -',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            name,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            name.isNotEmpty ? name : '(Nama belum diisi)',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            softWrap: true,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -740,39 +715,41 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Nama & NIM
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextFormField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Nama Lengkap #$studentNumber',
-                    prefixIcon: const Icon(Icons.person_rounded, size: 20),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Nama wajib diisi' : null,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  controller: nimController,
-                  decoration: InputDecoration(
-                    labelText: 'NIM #$studentNumber',
-                    prefixIcon: const Icon(Icons.badge_rounded, size: 20),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'NIM wajib diisi' : null,
-                ),
-              ),
-            ],
+          // Nama Lengkap (Lebar penuh sehingga nama panjang tidak terpotong)
+          TextFormField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: 'Nama Lengkap Mahasiswa #$studentNumber',
+              hintText: 'Contoh: Ahmad Maulana Akbar',
+              prefixIcon: const Icon(Icons.person_rounded, size: 20),
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            ),
+            validator: (v) {
+              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+                return 'Nama mahasiswa 1 wajib diisi';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // NIM (Lebar penuh sehingga NIM panjang terlihat jelas)
+          TextFormField(
+            controller: nimController,
+            decoration: InputDecoration(
+              labelText: 'NIM Mahasiswa #$studentNumber',
+              hintText: 'Contoh: 123200001',
+              prefixIcon: const Icon(Icons.badge_rounded, size: 20),
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            ),
+            validator: (v) {
+              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+                return 'NIM mahasiswa 1 wajib diisi';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 14),
 
@@ -792,8 +769,15 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               border: OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
-            validator: (v) =>
-                v == null || v.isEmpty ? 'Kesan tidak boleh kosong' : null,
+            validator: (v) {
+              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+                return 'Kesan perkuliahan wajib diisi';
+              }
+              if (studentNumber == 2 && nameController.text.trim().isNotEmpty && (v == null || v.trim().isEmpty)) {
+                return 'Kesan mahasiswa 2 wajib diisi';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 14),
 
@@ -813,8 +797,15 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               border: OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
-            validator: (v) =>
-                v == null || v.isEmpty ? 'Pesan tidak boleh kosong' : null,
+            validator: (v) {
+              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+                return 'Pesan perkuliahan wajib diisi';
+              }
+              if (studentNumber == 2 && nameController.text.trim().isNotEmpty && (v == null || v.trim().isEmpty)) {
+                return 'Pesan mahasiswa 2 wajib diisi';
+              }
+              return null;
+            },
           ),
         ],
       ),

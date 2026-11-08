@@ -265,7 +265,7 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
             ),
             const SizedBox(height: 10),
             Row(
-              children: [1, 2, 3, 4].map((days) {
+              children: [1, 2, 3, 5, 7].map((days) {
                 final isSelected = _durationDays == days;
                 return Expanded(
                   child: Padding(
@@ -291,10 +291,10 @@ class _PreferenceFormScreenState extends State<PreferenceFormScreen> {
                         });
                       },
                       child: Text(
-                        days >= 4 ? '4+ Hari' : '$days Hari',
+                        '$days Hari',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                       ),
                     ),

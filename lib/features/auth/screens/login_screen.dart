@@ -252,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text('Belum memiliki akun? '),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const RegisterScreen(),
@@ -270,6 +270,90 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
+
+                // Quick Demo Accounts Helper
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 16,
+                            color: Colors.grey.shade700,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Akun Cepat untuk Uji Coba / Emulator:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _emailController.text =
+                                      'traveler@bandunghub.id';
+                                  _passwordController.text = 'bandung123';
+                                  _errorMessage = null;
+                                });
+                              },
+                              child: const Text(
+                                'Traveler Demo',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _emailController.text =
+                                      'admin@bandunghub.id';
+                                  _passwordController.text = 'admin123';
+                                  _errorMessage = null;
+                                });
+                              },
+                              child: const Text(
+                                'Admin Demo',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
               ],
             ),
           ),

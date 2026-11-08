@@ -137,6 +137,9 @@ class ItineraryRepository extends ChangeNotifier {
     required String itineraryId,
     required Destination destination,
     required int dayNumber,
+    String? startTime,
+    String? endTime,
+    int? durationMinutes,
   }) async {
     final itinerary = getItineraryById(itineraryId);
     if (itinerary == null) return;
@@ -155,10 +158,37 @@ class ItineraryRepository extends ChangeNotifier {
       ticketPrice: destination.estimatedPrice,
       dayNumber: dayNumber,
       visitOrder: nextOrder,
+      startTime: startTime,
+      endTime: endTime,
+      durationMinutes: durationMinutes,
     );
 
     final updatedItems = List<ItineraryItem>.from(itinerary.items)
       ..add(newItem);
+    await updateItinerary(itinerary.copyWith(items: updatedItems));
+  }
+
+  Future<void> updateDestinationTimeInItinerary({
+    required String itineraryId,
+    required String itemId,
+    required String startTime,
+    required String endTime,
+    required int durationMinutes,
+  }) async {
+    final itinerary = getItineraryById(itineraryId);
+    if (itinerary == null) return;
+
+    final updatedItems = itinerary.items.map((item) {
+      if (item.id == itemId) {
+        return item.copyWith(
+          startTime: startTime,
+          endTime: endTime,
+          durationMinutes: durationMinutes,
+        );
+      }
+      return item;
+    }).toList();
+
     await updateItinerary(itinerary.copyWith(items: updatedItems));
   }
 

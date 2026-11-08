@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../navigation/main_navigation_screen.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -61,12 +62,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (mounted) {
       if (success) {
-        Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Akun ${_authRepo.userName} berhasil didaftarkan!'),
+            content: Text(
+              'Akun ${_authRepo.userName} berhasil didaftarkan! Selamat datang!',
+            ),
             backgroundColor: AppColors.success,
           ),
+        );
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const MainNavigationScreen(),
+          ),
+          (route) => false,
         );
       } else {
         setState(() {
@@ -345,12 +353,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const Text('Sudah memiliki akun? '),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
+                        }
                       },
                       child: const Text(
                         'Masuk di Sini',

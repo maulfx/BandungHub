@@ -12,6 +12,9 @@ class ItineraryItem {
   final int dayNumber; // Hari 1, Hari 2, dst.
   final int visitOrder; // Urutan kunjungan: 1, 2, 3...
   final String notes;
+  final String? startTime; // Jam mulai (misal: "09:00")
+  final String? endTime; // Jam selesai (misal: "11:00")
+  final int? durationMinutes; // Durasi kunjungan dalam menit (misal: 120)
 
   const ItineraryItem({
     required this.id,
@@ -23,6 +26,9 @@ class ItineraryItem {
     required this.dayNumber,
     required this.visitOrder,
     this.notes = '',
+    this.startTime,
+    this.endTime,
+    this.durationMinutes,
   });
 
   ItineraryItem copyWith({
@@ -35,6 +41,9 @@ class ItineraryItem {
     int? dayNumber,
     int? visitOrder,
     String? notes,
+    String? startTime,
+    String? endTime,
+    int? durationMinutes,
   }) {
     return ItineraryItem(
       id: id ?? this.id,
@@ -46,6 +55,9 @@ class ItineraryItem {
       dayNumber: dayNumber ?? this.dayNumber,
       visitOrder: visitOrder ?? this.visitOrder,
       notes: notes ?? this.notes,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
     );
   }
 
@@ -60,6 +72,9 @@ class ItineraryItem {
       'day_number': dayNumber,
       'visit_order': visitOrder,
       'notes': notes,
+      'start_time': startTime,
+      'end_time': endTime,
+      'duration_minutes': durationMinutes,
     };
   }
 
@@ -74,6 +89,9 @@ class ItineraryItem {
       dayNumber: (map['day_number'] as num?)?.toInt() ?? 1,
       visitOrder: (map['visit_order'] as num?)?.toInt() ?? 1,
       notes: map['notes'] ?? '',
+      startTime: map['start_time']?.toString(),
+      endTime: map['end_time']?.toString(),
+      durationMinutes: (map['duration_minutes'] as num?)?.toInt(),
     );
   }
 }
@@ -140,9 +158,19 @@ class Itinerary {
       }
       map[item.dayNumber]!.add(item);
     }
-    // Sort each day's items by visitOrder
+    // Sort each day's items by startTime if available, otherwise by visitOrder
     map.forEach((day, list) {
-      list.sort((a, b) => a.visitOrder.compareTo(b.visitOrder));
+      list.sort((a, b) {
+        if (a.startTime != null && b.startTime != null) {
+          final comp = a.startTime!.compareTo(b.startTime!);
+          if (comp != 0) return comp;
+        } else if (a.startTime != null && b.startTime == null) {
+          return -1;
+        } else if (a.startTime == null && b.startTime != null) {
+          return 1;
+        }
+        return a.visitOrder.compareTo(b.visitOrder);
+      });
     });
     return map;
   }
