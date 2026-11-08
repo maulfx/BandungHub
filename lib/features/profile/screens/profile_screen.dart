@@ -10,7 +10,6 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/destination_repository.dart';
 import '../../../data/repositories/itinerary_repository.dart';
 import '../../../data/repositories/theme_repository.dart';
-import '../../auth/screens/login_screen.dart';
 import '../../auth/screens/pin_lock_screen.dart';
 import '../../../data/repositories/offline_sync_repository.dart';
 import '../../academic/screens/course_feedback_screen.dart';
@@ -672,49 +671,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Konfirmasi Keluar'),
-          content: const Text(
-            'Apakah Anda yakin ingin keluar dari akun ini? Anda akan diarahkan kembali ke halaman masuk.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                Navigator.pop(dialogContext);
-                await _authRepo.logout();
-                if (mounted) {
-                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              },
-              child: const Text(
-                'Keluar Akun',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -1289,33 +1245,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _showSimplifiedStorageDialog,
                       ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Logout Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _confirmLogout,
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.error,
-                    ),
-                    label: const Text(
-                      'Keluar dari Akun',
-                      style: TextStyle(
-                        color: AppColors.error,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.error),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
