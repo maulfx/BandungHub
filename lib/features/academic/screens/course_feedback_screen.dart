@@ -6,7 +6,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Screen for Course Evaluation, Reflections, Impressions, and Feedback (Kesan & Pesan Kuliah)
-/// Mendukung 2 Mahasiswa (Tim Pengembang) dengan tampilan teks utuh tanpa terpotong.
 class CourseFeedbackScreen extends StatefulWidget {
   const CourseFeedbackScreen({super.key});
 
@@ -19,58 +18,34 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final _lecturerController = TextEditingController();
-
-  // Mahasiswa 1
-  final _student1NameController = TextEditingController();
-  final _student1NimController = TextEditingController();
-  final _impressions1Controller = TextEditingController();
-  final _suggestions1Controller = TextEditingController();
-
-  // Mahasiswa 2
-  final _student2NameController = TextEditingController();
-  final _student2NimController = TextEditingController();
-  final _impressions2Controller = TextEditingController();
-  final _suggestions2Controller = TextEditingController();
+  final _impressionsController = TextEditingController();
+  final _suggestionsController = TextEditingController();
 
   double _rating = 5.0;
-  final Set<String> _selectedTopics = {
-    'Flutter & Dart Clean Architecture',
-    'Offline-First & SQLite Storage',
-    'OpenStreetMap Navigation',
-    'AI Assistant & Travel Reasoning',
-  };
-
   bool _isLoading = true;
   bool _isSaved = false;
-
-  final List<String> _availableTopics = [
-    'Flutter & Dart Clean Architecture',
-    'Offline-First & SQLite Storage',
-    'OpenStreetMap Navigation',
-    'Autentikasi Biometrik & PIN',
-    'AI Assistant & Travel Reasoning',
-    'Review Blockchain Ledger & Sepolia Anchor',
-    'Responsive Design & Dark Mode',
-    'Unit & Widget Testing (100% Pass)',
-  ];
 
   @override
   void initState() {
     super.initState();
+    _impressionsController.addListener(_onFieldChanged);
+    _suggestionsController.addListener(_onFieldChanged);
+    _lecturerController.addListener(_onFieldChanged);
     _loadSavedFeedback();
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _impressionsController.removeListener(_onFieldChanged);
+    _suggestionsController.removeListener(_onFieldChanged);
+    _lecturerController.removeListener(_onFieldChanged);
     _lecturerController.dispose();
-    _student1NameController.dispose();
-    _student1NimController.dispose();
-    _impressions1Controller.dispose();
-    _suggestions1Controller.dispose();
-    _student2NameController.dispose();
-    _student2NimController.dispose();
-    _impressions2Controller.dispose();
-    _suggestions2Controller.dispose();
+    _impressionsController.dispose();
+    _suggestionsController.dispose();
     super.dispose();
   }
 
@@ -84,34 +59,14 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
         final data = jsonDecode(raw) as Map<String, dynamic>;
         setState(() {
           _lecturerController.text = data['lecturer'] ?? '';
-
-          // Mahasiswa 1
-          _student1NameController.text =
-              data['student1Name'] ?? data['studentName'] ?? '';
-          _student1NimController.text =
-              data['student1Nim'] ?? data['studentNim'] ?? '';
-          _impressions1Controller.text =
-              data['impressions1'] ?? data['impressions'] ?? '';
-          _suggestions1Controller.text =
-              data['suggestions1'] ?? data['suggestions'] ?? '';
-
-          // Mahasiswa 2
-          _student2NameController.text = data['student2Name'] ?? '';
-          _student2NimController.text = data['student2Nim'] ?? '';
-          _impressions2Controller.text = data['impressions2'] ?? '';
-          _suggestions2Controller.text = data['suggestions2'] ?? '';
-
+          _impressionsController.text =
+              data['impressions'] ?? data['impressions1'] ?? '';
+          _suggestionsController.text =
+              data['suggestions'] ?? data['suggestions1'] ?? '';
           _rating = (data['rating'] as num?)?.toDouble() ?? 5.0;
-          if (data['topics'] is List) {
-            _selectedTopics.clear();
-            _selectedTopics.addAll(
-              (data['topics'] as List).map((e) => e.toString()),
-            );
-          }
           _isSaved = true;
         });
       } else {
-        // Jika belum ada data yang disimpan, biarkan seluruh isian kosong
         setState(() {
           _isSaved = false;
         });
@@ -132,19 +87,9 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
 
     final data = {
       'lecturer': _lecturerController.text.trim(),
-      // Mahasiswa 1
-      'student1Name': _student1NameController.text.trim(),
-      'student1Nim': _student1NimController.text.trim(),
-      'impressions1': _impressions1Controller.text.trim(),
-      'suggestions1': _suggestions1Controller.text.trim(),
-      // Mahasiswa 2
-      'student2Name': _student2NameController.text.trim(),
-      'student2Nim': _student2NimController.text.trim(),
-      'impressions2': _impressions2Controller.text.trim(),
-      'suggestions2': _suggestions2Controller.text.trim(),
-      // Meta
+      'impressions': _impressionsController.text.trim(),
+      'suggestions': _suggestionsController.text.trim(),
       'rating': _rating,
-      'topics': _selectedTopics.toList(),
       'savedAt': DateTime.now().toIso8601String(),
     };
 
@@ -160,7 +105,7 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Kesan & pesan kedua mahasiswa berhasil disimpan!',
+          'Kesan & pesan perkuliahan berhasil disimpan!',
         ),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
@@ -172,191 +117,30 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
     final buffer = StringBuffer();
     buffer.writeln('=== EVALUASI, KESAN & PESAN KULIAH PEMROGRAMAN APLIKASI MOBILE ===');
     buffer.writeln('Aplikasi: ${AppConstants.appName} v${AppConstants.appVersion}');
-    buffer.writeln('Dosen Pengampu: ${_lecturerController.text}');
+    if (_lecturerController.text.trim().isNotEmpty) {
+      buffer.writeln('Dosen Pengampu: ${_lecturerController.text.trim()}');
+    }
     buffer.writeln('Rating Perkuliahan: ${_rating.toStringAsFixed(1)} / 5.0 ★');
 
-    buffer.writeln('\n========================================');
-    buffer.writeln('MAHASISWA 1:');
-    buffer.writeln('Nama: ${_student1NameController.text}');
-    buffer.writeln('NIM: ${_student1NimController.text}');
     buffer.writeln('\n[Kesan Perkuliahan]:');
-    buffer.writeln(_impressions1Controller.text);
+    buffer.writeln(_impressionsController.text.trim().isNotEmpty
+        ? _impressionsController.text.trim()
+        : '-');
     buffer.writeln('\n[Pesan & Saran]:');
-    buffer.writeln(_suggestions1Controller.text);
+    buffer.writeln(_suggestionsController.text.trim().isNotEmpty
+        ? _suggestionsController.text.trim()
+        : '-');
 
     buffer.writeln('\n========================================');
-    buffer.writeln('MAHASISWA 2:');
-    buffer.writeln('Nama: ${_student2NameController.text}');
-    buffer.writeln('NIM: ${_student2NimController.text}');
-    buffer.writeln('\n[Kesan Perkuliahan]:');
-    buffer.writeln(_impressions2Controller.text);
-    buffer.writeln('\n[Pesan & Saran]:');
-    buffer.writeln(_suggestions2Controller.text);
-
-    buffer.writeln('\n========================================');
-    buffer.writeln('Topik Paling Berkesan:');
-    for (final topic in _selectedTopics) {
-      buffer.writeln('• $topic');
-    }
-    buffer.writeln('\nStatus Proyek: 14/14 Fase Selesai (100% Passing Tests)');
+    buffer.writeln('Status Proyek: 14/14 Fase Selesai (100% Passing Tests)');
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Ringkasan evaluasi 2 mahasiswa disalin ke clipboard!'),
+        content: Text('Kesan & pesan kuliah disalin ke clipboard!'),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showPreviewDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.getCardColor(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.article_rounded, color: AppColors.primary),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Pratinjau Lengkap Kesan & Pesan',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildPreviewStudentCard(
-                    title: 'Mahasiswa 1',
-                    name: _student1NameController.text,
-                    nim: _student1NimController.text,
-                    impression: _impressions1Controller.text,
-                    suggestion: _suggestions1Controller.text,
-                    badgeColor: AppColors.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildPreviewStudentCard(
-                    title: 'Mahasiswa 2',
-                    name: _student2NameController.text,
-                    nim: _student2NimController.text,
-                    impression: _impressions2Controller.text,
-                    suggestion: _suggestions2Controller.text,
-                    badgeColor: const Color(0xFF6366F1),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPreviewStudentCard({
-    required String title,
-    required String name,
-    required String nim,
-    required String impression,
-    required String suggestion,
-    required Color badgeColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-              Text(
-                nim.isNotEmpty ? 'NIM: $nim' : 'NIM: -',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            name.isNotEmpty ? name : '(Nama belum diisi)',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            softWrap: true,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Kesan Perkuliahan:',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            impression,
-            style: const TextStyle(fontSize: 13, height: 1.45),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Pesan & Saran:',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            suggestion,
-            style: const TextStyle(fontSize: 13, height: 1.45),
-          ),
-        ],
       ),
     );
   }
@@ -377,11 +161,6 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
         backgroundColor: AppColors.getSurfaceColor(context),
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.remove_red_eye_rounded),
-            tooltip: 'Pratinjau Teks Lengkap',
-            onPressed: _showPreviewDialog,
-          ),
           IconButton(
             key: const Key('btn_copy_feedback_summary'),
             icon: const Icon(Icons.copy_all_rounded),
@@ -435,7 +214,7 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Tim Pengembang 2 Mahasiswa • Projek Akhir PAM',
+                          'Kesan & Pesan Perkuliahan PAM • Projek Akhir',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 12,
@@ -530,78 +309,8 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ==================== SEKSI MAHASISWA 1 ====================
-            _buildStudentFeedbackSection(
-              studentNumber: 1,
-              badgeColor: AppColors.primary,
-              nameController: _student1NameController,
-              nimController: _student1NimController,
-              impressionsController: _impressions1Controller,
-              suggestionsController: _suggestions1Controller,
-            ),
-            const SizedBox(height: 20),
-
-            // ==================== SEKSI MAHASISWA 2 ====================
-            _buildStudentFeedbackSection(
-              studentNumber: 2,
-              badgeColor: const Color(0xFF6366F1),
-              nameController: _student2NameController,
-              nimController: _student2NimController,
-              impressionsController: _impressions2Controller,
-              suggestionsController: _suggestions2Controller,
-            ),
-            const SizedBox(height: 20),
-
-            // Topik Paling Berkesan
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.getCardColor(context),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.getBorderColor(context)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Topik Perkuliahan Paling Berkesan',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _availableTopics.map((topic) {
-                      final isSelected = _selectedTopics.contains(topic);
-                      return FilterChip(
-                        label: Text(topic),
-                        selected: isSelected,
-                        selectedColor: AppColors.primary,
-                        checkmarkColor: Colors.white,
-                        labelStyle: TextStyle(
-                          fontSize: 11,
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.getTextPrimary(context),
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedTopics.add(topic);
-                            } else {
-                              _selectedTopics.remove(topic);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
+            // ==================== SEKSI KESAN & PESAN ====================
+            _buildCourseFeedbackSection(),
             const SizedBox(height: 24),
 
             // Action Buttons
@@ -609,7 +318,7 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               key: const Key('btn_save_feedback'),
               onPressed: _saveFeedback,
               icon: const Icon(Icons.save_rounded),
-              label: Text(_isSaved ? 'Perbarui Evaluasi (2 Mahasiswa)' : 'Simpan Evaluasi Kuliah'),
+              label: Text(_isSaved ? 'Perbarui Kesan & Pesan' : 'Simpan Kesan & Pesan'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -621,41 +330,23 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
             ),
             const SizedBox(height: 10),
 
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showPreviewDialog,
-                    icon: const Icon(Icons.visibility_rounded, size: 18),
-                    label: const Text('Pratinjau Penuh'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
+            OutlinedButton.icon(
+              onPressed: _copySummary,
+              icon: const Icon(Icons.copy_all_rounded, size: 18),
+              label: const Text('Salin Ringkasan ke Clipboard'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.getTextPrimary(context),
+                side: BorderSide(color: AppColors.getBorderColor(context)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _copySummary,
-                    icon: const Icon(Icons.share_rounded, size: 18),
-                    label: const Text('Salin Ringkasan'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.getTextPrimary(context),
-                      side: BorderSide(color: AppColors.getBorderColor(context)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+            const SizedBox(height: 24),
+
+            // ==================== PRATINJAU LANGSUNG DI PALING BAWAH ====================
+            _buildInlinePreviewSection(),
             const SizedBox(height: 32),
           ],
         ),
@@ -663,21 +354,14 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
     );
   }
 
-  Widget _buildStudentFeedbackSection({
-    required int studentNumber,
-    required Color badgeColor,
-    required TextEditingController nameController,
-    required TextEditingController nimController,
-    required TextEditingController impressionsController,
-    required TextEditingController suggestionsController,
-  }) {
+  Widget _buildCourseFeedbackSection() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.getCardColor(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: badgeColor.withValues(alpha: 0.35),
+          color: AppColors.primary.withValues(alpha: 0.35),
           width: 1.5,
         ),
       ),
@@ -689,80 +373,40 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.15),
+                  color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Mahasiswa #$studentNumber',
+                child: const Text(
+                  'Kesan & Pesan',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: badgeColor,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  studentNumber == 1 ? 'Ketua / Anggota 1' : 'Anggota 2',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.getTextSecondary(context),
-                  ),
+              Text(
+                'Refleksi Perkuliahan PAM',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.getTextSecondary(context),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          // Nama Lengkap (Lebar penuh sehingga nama panjang tidak terpotong)
-          TextFormField(
-            controller: nameController,
-            decoration: InputDecoration(
-              labelText: 'Nama Lengkap Mahasiswa #$studentNumber',
-              hintText: 'Contoh: Ahmad Maulana Akbar',
-              prefixIcon: const Icon(Icons.person_rounded, size: 20),
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            ),
-            validator: (v) {
-              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
-                return 'Nama mahasiswa 1 wajib diisi';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // NIM (Lebar penuh sehingga NIM panjang terlihat jelas)
-          TextFormField(
-            controller: nimController,
-            decoration: InputDecoration(
-              labelText: 'NIM Mahasiswa #$studentNumber',
-              hintText: 'Contoh: 123200001',
-              prefixIcon: const Icon(Icons.badge_rounded, size: 20),
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            ),
-            validator: (v) {
-              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
-                return 'NIM mahasiswa 1 wajib diisi';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 14),
-
-          // Kesan (Auto-expanding, minLines: 3, maxLines: null -> Teks terlihat utuh!)
-          Text(
-            'Kesan Mengikuti Perkuliahan (Mahasiswa #$studentNumber)',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          // Kesan
+          const Text(
+            'Kesan Mengikuti Perkuliahan',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           TextFormField(
-            controller: impressionsController,
-            minLines: 3,
-            maxLines: null, // Membuka agar seluruh teks terlihat penuh tanpa terpotong!
+            controller: _impressionsController,
+            minLines: 4,
+            maxLines: null,
             keyboardType: TextInputType.multiline,
             decoration: const InputDecoration(
               hintText: 'Tuliskan kesan dan pengalaman selama mengikuti perkuliahan...',
@@ -770,27 +414,24 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               alignLabelWithHint: true,
             ),
             validator: (v) {
-              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+              if (v == null || v.trim().isEmpty) {
                 return 'Kesan perkuliahan wajib diisi';
-              }
-              if (studentNumber == 2 && nameController.text.trim().isNotEmpty && (v == null || v.trim().isEmpty)) {
-                return 'Kesan mahasiswa 2 wajib diisi';
               }
               return null;
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          // Pesan & Saran (Auto-expanding, minLines: 2, maxLines: null -> Teks terlihat utuh!)
-          Text(
-            'Pesan & Saran Pengembangan (Mahasiswa #$studentNumber)',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          // Pesan & Saran
+          const Text(
+            'Pesan & Saran Pengembangan',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           TextFormField(
-            controller: suggestionsController,
-            minLines: 2,
-            maxLines: null, // Membuka agar seluruh teks terlihat penuh tanpa terpotong!
+            controller: _suggestionsController,
+            minLines: 4,
+            maxLines: null,
             keyboardType: TextInputType.multiline,
             decoration: const InputDecoration(
               hintText: 'Tuliskan pesan dan saran untuk dosen / laboratorium...',
@@ -798,14 +439,171 @@ class _CourseFeedbackScreenState extends State<CourseFeedbackScreen> {
               alignLabelWithHint: true,
             ),
             validator: (v) {
-              if (studentNumber == 1 && (v == null || v.trim().isEmpty)) {
+              if (v == null || v.trim().isEmpty) {
                 return 'Pesan perkuliahan wajib diisi';
-              }
-              if (studentNumber == 2 && nameController.text.trim().isNotEmpty && (v == null || v.trim().isEmpty)) {
-                return 'Pesan mahasiswa 2 wajib diisi';
               }
               return null;
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlinePreviewSection() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.getCardColor(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.visibility_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Pratinjau Kesan & Pesan Kuliah',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (_isSaved)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 12, color: Colors.green.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tersimpan',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Rating & Dosen overview row in preview
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.getSurfaceColor(context),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  '${_rating.toStringAsFixed(1)} / 5.0',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                Text(
+                  _lecturerController.text.trim().isNotEmpty
+                      ? 'Dosen: ${_lecturerController.text.trim()}'
+                      : 'Dosen: -',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.getTextSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Kesan
+          const Text(
+            'Kesan Perkuliahan:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _impressionsController.text.trim().isNotEmpty
+                ? _impressionsController.text.trim()
+                : '(Belum ada kesan perkuliahan)',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: _impressionsController.text.trim().isNotEmpty
+                  ? AppColors.getTextPrimary(context)
+                  : Colors.grey.shade500,
+              fontStyle: _impressionsController.text.trim().isNotEmpty
+                  ? FontStyle.normal
+                  : FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Pesan & Saran
+          const Text(
+            'Pesan & Saran:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _suggestionsController.text.trim().isNotEmpty
+                ? _suggestionsController.text.trim()
+                : '(Belum ada pesan & saran)',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: _suggestionsController.text.trim().isNotEmpty
+                  ? AppColors.getTextPrimary(context)
+                  : Colors.grey.shade500,
+              fontStyle: _suggestionsController.text.trim().isNotEmpty
+                  ? FontStyle.normal
+                  : FontStyle.italic,
+            ),
           ),
         ],
       ),
